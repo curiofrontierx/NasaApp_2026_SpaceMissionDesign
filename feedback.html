@@ -1119,7 +1119,7 @@ function rReport(){
   <div class="colp"><h3>What to improve</h3>${lessons.map(l=>`<div class="why-box">${l}</div>`).join('')}</div>
  </div>
  <div class="colp" style="margin-top:12px"><div class="sec" style="margin-top:0"><h3>🛰 Plumes you measured</h3><small>Real NASA EMIT detections in your target area</small></div>${plumeMap(sc.id,{zoom:true,gid:'rmap',hidden:true,r:REGION[sc.id]?2.2:1.4})}</div>
- <div class="nav"><button class="btn ghost" onclick="redesign()">✏️ Redesign this mission</button><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" onclick="flyAgain()">🔁 Fly the same design again</button><button class="btn" onclick="toHQ()">Back to HQ →</button></span></div>`;
+ <div class="nav"><button class="btn ghost" onclick="redesign()">✏️ Redesign this mission</button><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" onclick="flyAgain()">🔁 Fly the same design again</button><a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="index.html">🏠 Home</a><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="design.html">🔁 Replay</a></span></div>`;
  // animations: score count-up, ring, plume reveal
  const target=s.total, t0=performance.now(), el=$('scoreNum');
  const step=t=>{const k=Math.min(1,(t-t0)/1200), v=Math.round(target*(1-Math.pow(1-k,3))); if(el) el.textContent=v; if(k<1) requestAnimationFrame(step);}; requestAnimationFrame(step);
