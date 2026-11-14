@@ -4,7 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mission: Blue Marble</title>
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --bg: #091121;
+      --panel: #13213a;
+      --panel-active: #18304f;
+      --line: #304461;
+      --text: #edf4ff;
+      --muted: #92a4bd;
+      --accent: #9cdcff;
+      --teal: #8de0d2;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: radial-gradient(1200px 600px at 80% -10%, #16305a 0%, transparent 60%), var(--bg);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; }
+    h3 { font-size: 1rem; }
+    p { margin: 0 0 .6em; }
+
+    .page { max-width: 960px; margin: 0 auto; padding: 56px 16px 80px; }
+    .label { color: var(--teal); letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; font-weight: 600; }
+    .hero h1 { font-size: clamp(2.4rem, 7vw, 4.2rem); margin: .2em 0 .3em; }
+    .lead { font-size: 1.15rem; color: #bac9df; max-width: 680px; }
+
+    .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 12px 0 28px; }
+    .choice { position: relative; cursor: pointer; }
+    .choice input { position: absolute; opacity: 0; }
+    .card {
+      height: 100%; padding: 16px; border-radius: 14px;
+      background: var(--panel); border: 1px solid var(--line);
+      transition: border-color .15s, background .15s;
+    }
+    .card p { color: var(--muted); font-size: .85rem; }
+    .choice input:checked + .card { border-color: var(--accent); background: var(--panel-active); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .choice input:focus-visible + .card { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn {
+      cursor: pointer; border: 0; border-radius: 9px;
+      padding: 14px 28px; background: var(--accent); color: var(--bg);
+      font: inherit; font-size: 1.1rem; font-weight: 700;
+    }
+    .btn:hover { filter: brightness(1.1); }
+  </style>
 </head>
 <body>
   <main class="page">
@@ -26,19 +74,29 @@
       <h2>Choose your agency</h2>
       <div class="choice-grid" id="agencies"></div>
 
-      <div class="start-actions">
-        <button class="btn big" type="submit">🚀 Start Mission</button>
-      </div>
+      <button class="btn" type="submit">🚀 Start Mission</button>
     </form>
   </main>
 
-  <script src="js/data.js"></script>
   <script>
+    const DIFFICULTIES = {
+      cadet:    { name: 'Cadet',       desc: 'More money, slower warming and fewer disasters.' },
+      director: { name: 'Director',    desc: 'The balanced, standard game.' },
+      crisis:   { name: 'Crisis Mode', desc: 'A small budget, fast warming and frequent disasters.' },
+    };
+    const AGENCIES = {
+      budget:   { name: 'Budget Agency',   desc: 'Starts with +$150M, but advanced parts stay locked until 2032.' },
+      tech:     { name: 'Tech Agency',     desc: 'Starts with Autonomous Calibration researched, but has $80M less.' },
+      alliance: { name: 'Global Alliance', desc: 'Starts with 70 Public Support, but launches cost 15% more.' },
+      startup:  { name: 'Startup Agency',  desc: 'Reusable Launchers cost half, but every rocket is 5% less reliable.' },
+    };
+
     const card = (group, key, item, checked) => `
       <label class="choice">
         <input type="radio" name="${group}" value="${key}" ${checked ? 'checked' : ''}>
-        <div class="card"><h3>${item.name}</h3><p class="muted small">${item.desc}</p></div>
+        <div class="card"><h3>${item.name}</h3><p>${item.desc}</p></div>
       </label>`;
+
     document.getElementById('difficulties').innerHTML =
       Object.entries(DIFFICULTIES).map(([k, d]) => card('difficulty', k, d, k === 'director')).join('');
     document.getElementById('agencies').innerHTML =
