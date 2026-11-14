@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design Configuration | CurioFrontierX</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="design.html" class="active">Design Configuration</a>
+    <a href="nasa-data.html">NASA Data Configuration</a>
+  </nav>
+  <main>
+    <p class="label">Mission Control</p>
+    <h1>Design Configuration</h1>
+    <p>Engineer your methane-monitoring satellite within budget and launch mass limits. Choices are saved in your browser.</p>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Hardware</h2>
+        <label for="missionName">Mission name</label>
+        <input id="missionName" maxlength="40">
+        <label for="engine">Launch engine</label>
+        <select id="engine"></select>
+        <label for="battery">Battery</label>
+        <select id="battery"></select>
+        <label for="instrument">Detection instrument</label>
+        <select id="instrument"></select>
+        <label for="orbit">Orbit</label>
+        <select id="orbit"></select>
+        <label><input type="checkbox" id="shielding"> Radiation shielding (+$8M, +40 kg)</label>
+      </section>
+
+      <section class="panel">
+        <h2>Mission Summary</h2>
+        <div class="stat"><span>Cost</span><span id="costText"></span></div>
+        <div class="bar"><div id="costBar"></div></div>
+        <div class="stat"><span>Payload mass</span><span id="massText"></span></div>
+        <div class="bar"><div id="massBar"></div></div>
+        <div class="stat"><span>Power balance</span><span id="powerText"></span></div>
+        <div class="stat"><span>Methane detection score</span><span id="scoreText"></span></div>
+        <div class="stat"><span>Status</span><span id="statusText"></span></div>
+        <ul id="issues" class="muted"></ul>
+
+        <button id="saveBtn">Save design</button>
+        <button id="resetBtn" class="secondary">Reset to defaults</button>
+        <button id="exportBtn" class="secondary">Export JSON</button>
+        <label for="importFile">Import JSON</label>
+        <input type="file" id="importFile" accept="application/json">
+        <p class="toast" id="toast"></p>
+      </section>
+    </div>
+
+    <footer>An independent team project. This is not an official NASA website.</footer>
+  </main>
+  <script src="assets/design.js"></script>
+</body>
+</html>
