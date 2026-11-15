@@ -8,12 +8,13 @@ const shortName = n => n.replace(/\s*\(.*?\)/g, '').slice(0, 26);
 // Bar graph: one row per category plus the overall average.
 function renderRatings(cfg, el) {
   const vals = BUILD_KEYS.map(k => RATINGS[k][cfg[k]]);
-  const rows = BUILD_KEYS.map((k, i) => [LABELS[k], vals[i]]);
+  const rows = BUILD_KEYS.map((k, i) => [LABELS[k], vals[i], k]);
   rows.push(['Overall', Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)]);
   el.innerHTML = '';
-  for (const [label, v] of rows) {
+  for (const [label, v, k] of rows) {
     const row = document.createElement('div');
     row.className = label === 'Overall' ? 'rating overall' : 'rating';
+    if (k) { row.dataset.noteCat = k; row.dataset.noteId = cfg[k]; }
     const name = document.createElement('span');
     name.textContent = label;
     const bar = document.createElement('div');
@@ -71,9 +72,10 @@ function renderSatellite(cfg, el) {
 
   // Labels with leader lines
   const label = (x, y, lx, ly, k, anchor) =>
-    `<line x1="${x}" y1="${y}" x2="${lx}" y2="${ly}" stroke="#5b6b85"/>`
+    `<g data-note-cat="${k}" data-note-id="${escXml(cfg[k])}" style="cursor:help">`
+    + `<line x1="${x}" y1="${y}" x2="${lx}" y2="${ly}" stroke="#5b6b85"/>`
     + `<text x="${lx}" y="${ly - 4}" font-size="12" fill="#edf4ff" text-anchor="${anchor}">${LABELS[k]} · ${r(k)}%</text>`
-    + `<text x="${lx}" y="${ly + 10}" font-size="10" fill="#bac9df" text-anchor="${anchor}">${name(k)}</text>`;
+    + `<text x="${lx}" y="${ly + 10}" font-size="10" fill="#bac9df" text-anchor="${anchor}">${name(k)}</text></g>`;
   s += label(222, 230, 20, 300, 'battery', 'start') + label(295, 150, 500, 110, 'storage', 'end')
      + label(260, 60, 20, 40, 'transmitter', 'start') + label(260, 285, 500, 330, 'detector', 'end')
      + label(370, 240, 500, 270, 'thruster', 'end');

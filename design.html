@@ -20,6 +20,11 @@
       <a class="tab-link" href="simulation.html?view=launch">🚀 <span>Launch</span></a>
       <a class="tab-link" href="simulation.html?view=ops">📊 <span>Mission Control</span></a>
     </nav>
+    <div class="budget-pill" id="topBudgetPill" title="Agency funds left after parts">
+      <span>💰</span>
+      <span class="budget-label">Funds left</span>
+      <b id="topBudget" class="mono">—</b>
+    </div>
   </header>
   <main>
     <p class="label">Mission Control</p>
@@ -46,31 +51,19 @@
       </section>
 
       <section class="panel">
-        <h2>My Designs</h2>
-        <p class="muted">Save this build under its mission name and load it again later. Designs are saved in this browser.</p>
-        <button id="saveNamedBtn">💾 Save design</button>
-        <div id="library"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Budget</h2>
-        <div class="stat"><span>Spent</span><span id="costText"></span></div>
-        <div class="bar"><div id="costBar"></div></div>
-        <div class="stat"><span>Remaining</span><span id="remainingText"></span></div>
-
-        <h2>Selected Parts</h2>
-        <div id="parts"></div>
+        <h2>Build Overview</h2>
+        <p class="muted">How good each part is (green ≥ 75%, yellow ≥ 50%, red below) and what your satellite looks like. Hover a part for a simple explanation.</p>
+        <div id="ratings"></div>
+        <div id="satDiagram" style="margin-top:12px"></div>
         <p id="compat" class="bad"></p>
       </section>
     </div>
 
     <section class="panel">
-      <h2>Build Overview</h2>
-      <p class="muted">How good each part is (green ≥ 75%, yellow ≥ 50%, red below), and what your satellite looks like. Updates as you change parts.</p>
-      <div class="grid">
-        <div id="ratings"></div>
-        <div id="satDiagram"></div>
-      </div>
+      <h2>My Designs</h2>
+      <p class="muted">Save this build under its mission name and load it again later. Designs are saved in this browser.</p>
+      <button id="saveNamedBtn">💾 Save design</button>
+      <div id="library"></div>
     </section>
 
     <section class="panel">
@@ -104,6 +97,7 @@
   <script src="assets/sites.js"></script>
   <script src="assets/parts.js"></script>
   <script src="assets/sat-diagram.js"></script>
+  <script src="assets/part-notes.js"></script>
   <script src="assets/nasa-weather.js"></script>
   <script src="assets/design.js"></script>
   <script src="assets/design-library.js"></script>
