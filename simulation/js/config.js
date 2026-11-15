@@ -33,7 +33,8 @@ const DEFAULT_CONFIG = {
   startFunds: 1500000,        // USD
   annualBudget: 900000,       // USD per year before trust modifier
   startDate: '2027-01-01T00:00:00Z',
-  roundLengthMonths: 12,      // "End round" suggestion interval for the Feedback page
+  roundLengthMonths: 12,      // (legacy) interval for the old "End round" reminder
+  eventScale: 1,              // how often random events happen: 0.5 rare, 1 normal, 1.8 frequent
 };
 
 const DIFFICULTY = {
@@ -54,6 +55,13 @@ function loadConfig() {
   if (params.get('difficulty')) cfg.difficulty = params.get('difficulty');
   const out = { ...DEFAULT_CONFIG, ...cfg };
   if (!DIFFICULTY[out.difficulty]) out.difficulty = 'director';
+  // keep player-chosen settings in sensible ranges (they come from the Design page's mission settings)
+  const num = (v, lo, hi, d) => { v = +v; return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; };
+  out.durationYears = num(out.durationYears, 1, 100, DEFAULT_CONFIG.durationYears);
+  out.startFunds = num(out.startFunds, 0, 50e6, DEFAULT_CONFIG.startFunds);
+  out.annualBudget = num(out.annualBudget, 0, 20e6, DEFAULT_CONFIG.annualBudget);
+  out.eventScale = num(out.eventScale, 0, 3, 1);
+  if (isNaN(Date.parse(out.startDate))) out.startDate = DEFAULT_CONFIG.startDate;
   return out;
 }
 

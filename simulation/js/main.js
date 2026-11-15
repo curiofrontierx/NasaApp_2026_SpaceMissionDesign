@@ -12,7 +12,9 @@
     try {
       const S = SIM.load(saved);
       // a new config from the Start / Design pages (different length or start) means a new game
-      if (S.cfg.durationYears === cfg.durationYears && S.cfg.startDate === cfg.startDate && S.cfg.difficulty === cfg.difficulty && !S.ended) {
+      // any change to the mission settings (Design page) means a new game; only the agency name can change mid-game
+      const same = ['durationYears', 'startDate', 'difficulty', 'startFunds', 'annualBudget', 'eventScale'].every(k => String(S.cfg[k] ?? DEFAULT_CONFIG[k]) === String(cfg[k]));
+      if (same && !S.ended) {
         S.cfg = { ...S.cfg, ...cfg };
         loaded = true;
       }
@@ -34,6 +36,7 @@
     SIM.advance(3 * 86400); for (let k = 0; k < 40; k++) SIM.advance(7200);
     // test hook: &adv=<months> lets the demo world run for that many months
     if (params.get('adv')) for (let k = 0; k < +params.get('adv'); k++) SIM.advance(30.44 * 86400);
+    S.advDone = true;
     // test hook: &utc=<hour> moves the clock to that UTC hour (e.g. daylight launches from Vandenberg: &utc=20)
     if (params.get('utc')) { const hr = new Date(S.t).getUTCHours() + new Date(S.t).getUTCMinutes() / 60; const add = ((+params.get('utc') - hr) % 24 + 24) % 24; for (let k = 0; k < Math.ceil(add); k++) SIM.advance(Math.min(3600, (add - k) * 3600)); }
     const r = SIM.bookLaunch('rideshare', S.designs[0], 1, { alt: 525, inc: ORB.ssoInclination(525e3) / ORB.DEG, site: 'vsfb', recover: true });
@@ -51,7 +54,11 @@
   const input = DESIGN_INPUT.sync(S);
   if (input) LaunchView.preselect(input.design.name);
 
+  // test hook: &adv=<months> without the demo runs an empty world forward
+  if (params.get('adv') && !S.advDone && !loaded) for (let k = 0; k < +params.get('adv'); k++) SIM.advance(30.44 * 86400);
+  delete S.advDone;
   UI.bind();
+  GUIDE.init();
   UI.setWarp(S.warp || 3600);
 
   let view = 'map';
@@ -61,13 +68,15 @@
   UI.show(view);
   UI.updateTop(true);
 
+  // test hook: &endnow=complete ends the game through the normal end-of-game path (end screen, then the report)
+  if (params.get('endnow')) setTimeout(() => SIM.end(params.get('endnow')), 600);
   // test hook: &click=<css selector>[|<selector>…] clicks controls after load (e.g. map toggles)
   if (params.get('click')) setTimeout(() => params.get('click').split('|').forEach(sel => { const el = document.querySelector(sel); if (el) el.click(); }), 400);
   // test hook: &select=1 opens the first satellite in the Orbit Viewer
   if (params.get('select') && S.satellites.length) setTimeout(() => { UI.show('orbit'); OrbitView.select(S.satellites[0].id); }, 200);
   if (demoNote) UI.toast(demoNote, 'good');
   else if (loaded) UI.toast(`Welcome back. Continuing from ${SIM.fmtDate(S.t)}.`, 'good', 'Save loaded');
-  else if (!safeGet('mbm.sim.seenHelp')) help();
+  else if (!safeGet('mbm.sim.seenHelp')) { safeSet('mbm.sim.seenHelp', '1'); GUIDE.firstRun(); }
   else if (input && input.isNew) UI.toast(`${input.design.name} arrived from the Design Configuration page. Book a launch for it.`, 'good', 'Design received');
   if (!input && !demoNote) UI.toast('No satellite design found. Configure one on the Design Configuration page first.', 'warn');
 
@@ -86,7 +95,7 @@
       <div class="modal-actions"><button class="btn" id="m-start">Plan a launch →</button></div>`);
     $('#m-start').onclick = () => { UI.closeModal(); UI.show('launch'); };
   }
-  window.blueMarbleHelp = help;
+  window.blueMarbleHelp = GUIDE.showHelp;
 
   // main loop
   let last = performance.now();
@@ -94,6 +103,7 @@
     const dt = Math.min(0.25, (now - last) / 1000);
     last = now;
     try {
+      GUIDE.frame(dt);
       if (LaunchView.flying) LaunchView.frame(dt);
       else SIM.tick(dt);
       UI.updateTop();

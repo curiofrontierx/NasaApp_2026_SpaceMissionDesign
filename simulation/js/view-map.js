@@ -9,52 +9,9 @@ const MapView = (() => {
   let selected = null; // { kind: 'country'|'site', id }
   let lastTracks = 0, lastSats = 0, lastChoro = 0;
 
-  // single-hue ramps: dim (near zero) → bright (high) on the dark map surface
-  const RAMPS = {
-    emissions: ['#2b1608', '#4d230b', '#73320e', '#9c4312', '#c65618', '#ec6d24', '#ff9150', '#ffbb8a'],
-    intensity: ['#2b1608', '#4d230b', '#73320e', '#9c4312', '#c65618', '#ec6d24', '#ff9150', '#ffbb8a'],
-    warming: ['#2a0e14', '#4a1420', '#6e1a2b', '#931f35', '#b9283f', '#da3a4c', '#f1606a', '#ff9ea2'],
-    policy: ['#0b2117', '#0f3524', '#124a31', '#16613f', '#1a7a4e', '#21945e', '#2fb072', '#5fd196'],
-    // diverging: teal = emissions falling, neutral grey = unchanged, red = rising
-    trend: ['#1f8a9e', '#3aa5b6', '#6cc0cc', '#a3d8de', '#5a606c', '#eaa3a3', '#dc6f6f', '#c94444', '#a32222'],
-    site: ['#4d230b', '#73320e', '#9c4312', '#c65618', '#ec6d24', '#ff9150', '#ffbb8a', '#ffe2c8'],
-  };
-  const SCALES = {
-    emissions: { title: 'Methane emissions (Mt CH₄ / year)', min: 0.2, max: 70, log: true, fmt: v => v < 1 ? v.toFixed(1) : v.toFixed(0) },
-    intensity: { title: 'Emissions per area (t CH₄ / km² / year)', min: 0.3, max: 30, log: true, fmt: v => v.toFixed(v < 1 ? 1 : 0) },
-    warming: { title: 'Local warming vs pre-industrial (°C)', min: 0.8, max: 5, log: false, fmt: v => v.toFixed(1) },
-    policy: { title: 'Leak-control policy strength (% of emissions cut)', min: 0, max: 45, log: false, fmt: v => v.toFixed(0) },
-    trend: { title: 'Emissions now vs the start of the game (%)', min: -40, max: 40, log: false, fmt: v => (v > 0 ? '+' : '') + v.toFixed(0) },
-    site: { title: 'Methane from each site region (t/h)', min: 5, max: 1500, log: true, fmt: v => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0) },
-  };
+  // colour scales and border loading are shared with the mission report (map-common.js)
+  const { RAMPS, SCALES, rampColor, featureStats } = MAPC;
 
-  function rampColor(mode, v) {
-    const s = SCALES[mode], r = RAMPS[mode];
-    if (v == null || !isFinite(v)) return null;
-    let f = s.log ? (Math.log(Math.max(v, s.min)) - Math.log(s.min)) / (Math.log(s.max) - Math.log(s.min)) : (v - s.min) / (s.max - s.min);
-    f = clamp(f, 0, 0.999);
-    return r[Math.floor(f * r.length)];
-  }
-
-  /* ---------- geometry helpers ---------- */
-  function ringArea(ring) { // km², spherical approximation
-    let a = 0;
-    for (let i = 0; i < ring.length; i++) {
-      const [l1, p1] = ring[i], [l2, p2] = ring[(i + 1) % ring.length];
-      a += (l2 - l1) * Math.PI / 180 * (2 + Math.sin(p1 * Math.PI / 180) + Math.sin(p2 * Math.PI / 180));
-    }
-    return Math.abs(a * 6371 * 6371 / 2);
-  }
-  function featureStats(f) {
-    const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-    let area = 0, latSum = 0, n = 0, biggest = 0, cLat = 0;
-    for (const p of polys) {
-      const a = ringArea(p[0]); area += a;
-      if (a > biggest) { biggest = a; let s = 0; p[0].forEach(c => { s += c[1]; }); cLat = s / p[0].length; }
-      p[0].forEach(c => { latSum += c[1]; n++; });
-    }
-    return { area, lat: cLat || latSum / Math.max(1, n) };
-  }
   // Arctic amplification and land/ocean contrast (land warms ~1.5× the global mean, the Arctic ~3–4×)
   function localWarming(lat) {
     const dT = SIM.state.climate.dT;
@@ -145,17 +102,7 @@ const MapView = (() => {
     drawSites();
     renderDetail();
     try {
-      const topo = await (await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json')).json();
-      features = topojson.feature(topo, topo.objects.countries).features;
-      // countries that cross the 180° meridian (Russia, Fiji…) would smear a stripe across the map: unwrap them
-      features.forEach(f => {
-        const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-        polys.forEach(p => p.forEach(ring => {
-          const lons = ring.map(c => c[0]);
-          if (Math.max(...lons) - Math.min(...lons) > 180) ring.forEach(c => { if (c[0] < 0) c[0] += 360; });
-        }));
-      });
-      features.forEach(f => { const st = featureStats(f); f.properties._area = st.area; f.properties._lat = st.lat; });
+      features = await MAPC.loadCountries();
       countryLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
         pane: 'countries', style: styleCountry,
         onEachFeature: (f, layer) => {

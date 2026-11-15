@@ -294,6 +294,52 @@ dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
 .toast b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
 @keyframes tin { from { opacity: 0; transform: translateY(10px); } }
 
+/* ---------- guidance: hint pill, help, warp banner, tutorial coach, flight hint ---------- */
+.help-btn { width: 32px; height: 32px; border-radius: 50%; font-weight: 700; margin-left: 6px; }
+@keyframes hintpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,210,87,0); } 50% { box-shadow: 0 0 0 4px rgba(255,210,87,.18); } }
+.warp-banner { position: fixed; left: 50%; top: calc(var(--top-h) + 10px); transform: translateX(-50%); z-index: 2200; width: min(640px, calc(100vw - 24px)); background: rgba(8,16,34,.96); border: 1px solid rgba(76,195,255,.55); border-radius: 14px; padding: 10px 14px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.warp-banner .wb-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.warp-banner .wb-head .mono { color: var(--accent); font-size: 13px; }
+.warp-banner .wb-stats { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.wb-events { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; color: var(--text-2); display: grid; gap: 2px; }
+.wb-events li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coach { position: fixed; left: 14px; bottom: 14px; z-index: 2300; width: min(380px, calc(100vw - 28px)); background: var(--panel-solid); border: 1px solid rgba(255,210,87,.6); border-radius: 14px; padding: 12px 14px 12px; box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+.coach-top { display: flex; justify-content: space-between; align-items: center; }
+.coach-step { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #ffd257; }
+.coach h3 { font-size: 17px; margin: 4px 0 6px; }
+.coach-text { font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
+.coach-text b { color: var(--text); }
+.coach-need { margin-top: 8px; font-size: 13px; color: #ffe6a3; }
+.coach-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+.coach-wait { font-size: 12px; color: var(--muted); }
+.coach-wait a { color: var(--muted); }
+.guide-hl { outline: 3px solid #ffd257 !important; outline-offset: 3px; border-radius: 8px; animation: guidepulse 1.2s ease-in-out infinite; position: relative; z-index: 5; }
+@keyframes guidepulse { 0%, 100% { outline-color: rgba(255,210,87,1); } 50% { outline-color: rgba(255,210,87,.35); } }
+
+/* ---------- launch flow ---------- */
+.fm-options { display: grid; gap: 6px; margin-top: 10px; text-align: left; font-size: 13.5px; color: var(--text-2); }
+.flight-msg { max-width: 560px; }
+.mission-steps { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.mission-steps li { color: var(--muted); }
+.mission-steps li.done { color: var(--good); }
+.mission-steps li.now { color: #ffe6a3; font-weight: 600; }
+.big-actions { display: grid; gap: 6px; }
+.big-actions .btn.ready { animation: hintpulse 1.6s ease-in-out infinite; }
+details.adv { margin: 6px 0; border-top: 1px solid var(--line); padding-top: 4px; }
+details.adv summary { cursor: pointer; color: var(--text-2); font-size: 13.5px; font-weight: 600; letter-spacing: .02em; padding: 8px 10px; margin: 0 -6px; border-radius: 8px; user-select: none; }
+details.adv summary:hover { color: var(--text); background: rgba(255,255,255,.06); }
+details.adv[open] summary { color: var(--text); }
+
+/* the booking buttons stay in reach at the bottom of the planner while scrolling */
+.book-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px -6px 0; padding: 10px 6px; position: sticky; bottom: 0; z-index: 3; background: var(--panel-solid); border-top: 1px solid var(--line); box-shadow: 0 -10px 18px rgba(0,0,0,.35); border-radius: 0 0 10px 10px; }
+.book-row .btn { flex: 1 1 180px; justify-content: center; }
+.btn.warp-orbit { background: linear-gradient(135deg, #2bb673, #4cc3ff); color: #04101f; font-weight: 700; }
+.fm-check { display: flex; gap: 10px; align-items: flex-start; text-align: left; margin: 14px 0 6px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(255,255,255,.03); cursor: pointer; }
+.fm-check input { margin-top: 3px; width: 18px; height: 18px; flex: none; accent-color: #3ddc84; }
+.fm-check small { color: var(--muted); }
+.fm-where { display: block; margin-top: 12px; }
+.warp-cap { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 1250px) {
   .tabs button span, .tabs .tab-link span { display: none; }

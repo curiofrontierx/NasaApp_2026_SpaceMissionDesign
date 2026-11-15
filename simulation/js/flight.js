@@ -426,7 +426,7 @@ const FLIGHT = (() => {
 
   /* ---------- integrate ---------- */
   function step(f, dt, input) {
-    if (f.ended) return;
+    if (f.ended || f.hold) return; // hold: on the pad, waiting for the player to choose how to launch
     f.t += dt;
     if (f.t < 0) { f.r = ecefToEci(f.siteEcef, theta(f)); f.v = earthVel(f.r); f.att = norm(f.r); f.cmd = f.att; return; }
     if (!f.launched) { f.launched = true; note(f, 'Ignition!', 'good'); }
@@ -436,6 +436,11 @@ const FLIGHT = (() => {
     if (f.ap.engaged && !manual) {
       if (f.ap.wasManual) { f.ap.wasManual = false; const o = orbit(f); note(f, `Autopilot re-planning from the current trajectory (Ap ${(o.ap / 1000).toFixed(0)} km, Pe ${(o.pe / 1000).toFixed(0)} km).`, 'adapt'); f.ap.adaptFlash = now + 3; }
       const c = autopilot(f); f.cmd = c.dir; throttle = c.throttle;
+      // orbital burns: wait until the nose points the right way before lighting the engine (turning takes a while in space)
+      if (throttle > 0 && !['ascend', 'land'].includes(f.ap.program) && f.liftedOff && angle(f.att, f.cmd) > 10 * DEG) { throttle = 0; f.ap.phase = (f.ap.phase || '').replace(/ · turning$/, '') + ' · turning'; }
+      // never push a light stage harder than 5 g
+      const stA = f.stages[f.stageIdx];
+      if (throttle > 0 && stA && f.liftedOff) { const full = stageThrust(f, stA, f.air.p); const lim = 5 * G0 * mass(f) / (full || 1); if (lim < throttle) throttle = Math.max(stA.minThrottle, lim); }
       const ph = phFromDir(f.r, f.cmd); f.pitch = ph.pitch; f.heading = ph.hdg;
     } else {
       if (manual) f.ap.wasManual = true;
