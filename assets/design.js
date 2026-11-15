@@ -1,7 +1,35 @@
 // Design Configuration: player hardware choices, validated and persisted in localStorage.
 const STORAGE_KEY = 'cfx.design.v1';
-// BUDGET, OPTIONS, LABELS and DEFAULTS come from assets/parts.js.
+// BUDGET comes from agencyBudget(); OPTIONS, LABELS and DEFAULTS come from assets/parts.js.
 const SIM_PAGE = 'simulation.html'; // simulation page (built by a teammate)
+
+// Shared budget with simulation.html: the agency's current funds from its saved game (mbm.sim.save),
+// else the starting funds from the game setup (mbm.config), else SHARED_START_FUNDS.
+// The same money pays for the satellite parts here and for launches/operations in the simulation,
+// so the shared starting budget is set higher than the simulation's own default ($1,500,000).
+const SHARED_START_FUNDS = 3000000;
+// Write the starting funds into the simulation's game setup (documented in simulation/HANDOFF.md),
+// keeping any other settings a teammate page saved. Only fills it in if no amount is set yet.
+(function shareStartFunds() {
+  try {
+    const c = JSON.parse(localStorage.getItem('mbm.config') || '{}') || {};
+    if (typeof c.startFunds !== 'number') localStorage.setItem('mbm.config', JSON.stringify({ ...c, startFunds: SHARED_START_FUNDS }));
+  } catch { /* storage blocked */ }
+})();
+function agencyBudget() {
+  try {
+    const s = JSON.parse(localStorage.getItem('mbm.sim.save'));
+    if (s && typeof s.funds === 'number' && !s.ended) return { amount: Math.max(0, Math.round(s.funds)), source: 'game' };
+  } catch { /* no game yet */ }
+  try {
+    const c = JSON.parse(localStorage.getItem('mbm.config'));
+    if (c && typeof c.startFunds === 'number') return { amount: c.startFunds, source: 'config' };
+  } catch { /* no setup */ }
+  return { amount: SHARED_START_FUNDS, source: 'default' };
+}
+const BUDGET_INFO = agencyBudget();
+const BUDGET = BUDGET_INFO.amount;
+const BUDGET_SOURCE_TEXT = { game: 'Agency funds from your simulation game', config: 'Starting funds from the game setup', default: 'Starting agency funds' };
 
 const $ = id => document.getElementById(id);
 const find = (key, id) => OPTIONS[key].find(o => o.id === id);
@@ -11,6 +39,7 @@ for (const key of Object.keys(OPTIONS)) {
   $(key).innerHTML = OPTIONS[key]
     .map(o => `<option value="${o.id}">${o.name}${o.cost ? ` (${money(o.cost)})` : ''}</option>`).join('');
   $(key).addEventListener('change', update);
+  $(key).dataset.noteCat = key; // hover note for the chosen part (assets/part-notes.js)
 }
 $('missionName').addEventListener('input', update);
 
@@ -28,7 +57,7 @@ function applyForm(cfg) {
 }
 
 function selectedParts(cfg) {
-  return Object.keys(OPTIONS).map(key => ({ label: LABELS[key], ...find(key, cfg[key]) }));
+  return Object.keys(OPTIONS).map(key => ({ cat: key, label: LABELS[key], ...find(key, cfg[key]) }));
 }
 
 // Part combinations the catalog says cannot work. Returns a message, or '' if the design is fine.
@@ -47,29 +76,10 @@ function update() {
   renderSatellite(readForm(), $('satDiagram'));
   const parts = selectedParts(readForm());
   const cost = parts.reduce((sum, p) => sum + p.cost, 0);
-  $('costText').textContent = `${money(cost)} / ${money(BUDGET)}`;
-  $('costText').className = cost > BUDGET ? 'bad' : 'ok';
-  $('costBar').style.width = Math.min(100, cost / BUDGET * 100) + '%';
-  $('remainingText').textContent = cost > BUDGET ? `−${money(cost - BUDGET)}` : money(BUDGET - cost);
-  $('remainingText').className = cost > BUDGET ? 'bad' : 'ok';
-
-  $('parts').innerHTML = '';
-  for (const p of parts) {
-    const div = document.createElement('div');
-    div.className = 'part';
-    const head = document.createElement('div');
-    head.className = 'part-head';
-    const name = document.createElement('span');
-    name.textContent = `${p.label}: ${p.name}`;
-    const price = document.createElement('span');
-    price.textContent = p.cost ? money(p.cost) : 'No fee';
-    head.append(name, price);
-    const desc = document.createElement('p');
-    desc.className = 'muted';
-    desc.textContent = p.desc;
-    div.append(head, desc);
-    $('parts').appendChild(div);
-  }
+  // Budget is shown only in the top-right pill (always visible in the top bar).
+  $('topBudget').textContent = cost > BUDGET ? `−${money(cost - BUDGET)}` : money(BUDGET - cost);
+  $('topBudget').className = `mono ${cost > BUDGET ? 'bad' : 'ok'}`;
+  $('topBudgetPill').title = `${BUDGET_SOURCE_TEXT[BUDGET_INFO.source]}: ${money(BUDGET)} · parts ${money(cost)} · left ${money(BUDGET - cost)}`;
 }
 
 function toast(msg) { $('toast').textContent = msg; setTimeout(() => { $('toast').textContent = ''; }, 3000); }
