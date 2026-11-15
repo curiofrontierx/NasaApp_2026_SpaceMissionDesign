@@ -4,15 +4,20 @@ The gameplay for the NASA Space Apps Challenge 2026 project. The player designs 
 
 Plain HTML/CSS/JavaScript: no install, no build step. The page is `simulation.html` (next to design.html); its code lives in this `simulation/` folder. Open it in Chrome or Edge with an internet connection (NASA data and the 3D/map libraries load from the web).
 
-- Normal flow: `index.html` → `design.html` → **Simulate** → `simulation.html`.
+- Normal flow: `index.html` → `design.html` (pick parts and the **Mission settings**: length up to 100 years, difficulty, starting funds, yearly budget, start year, random events) → **Simulate** → `simulation.html`.
 - `simulation.html?new=1` starts a fresh game.
 - `simulation.html?new=1&demo=1` starts with three satellites already in orbit and a launch booked (for testing and presentations).
 - `simulation.html?new=1&demo=flight` starts on the launch pad (add `&utc=20` for a daytime launch from Vandenberg).
 
-How this page connects to design.html and feedback.html: see **HANDOFF.md**. Every NASA service and URL the page uses: see **NASA_DATA_SOURCES.txt** in the Project folder (next to `NasaApp_2026_SpaceMissionDesign`).
+When the mission ends (time runs out, game over, or **End mission**), the player is sent to **feedback.html**, which shows the mission report from `simulation/report/`: the verdict, how effective the mission was, money, satellites and other statistics, and the methane map at the start and at the end with a timelapse. How the pages connect: see **HANDOFF.md**. Every NASA service and URL the page uses: see **NASA_DATA_SOURCES.txt** in the Project folder (next to `NasaApp_2026_SpaceMissionDesign`).
+
+## Getting started is guided
+- **Tutorial:** a new player is offered a tutorial that walks through the first mission (book a launch → warp to launch day → launch → deploy → run time → reports), highlighting the button to press at each step. The **?** button in the top bar shows how to play and restarts the tutorial.
+- **⏩ Warp to launch day:** plays the waiting time in a few seconds, slowing down near the day. Everything in between still happens: a banner lists the events, decisions still pause the clock, and launch day opens with a "while you waited" summary.
+- **Launching:** after **📅 Book this launch**, two buttons appear next to it (and on the launch in the schedule): **⏭ Warp to orbit** jumps to launch day and flies straight to orbit, and **⏩ Warp to launch day** lets the player fly the rocket. On the pad the player can still choose **⏭ Warp to orbit**, **🚀 Launch with autopilot** or **🕹️ Fly it myself**, and **⏭ Warp to orbit** (button or K) works at any moment of a flight, with the autopilot on or off. A **Mission steps** checklist shows progress, and reaching orbit pops up **🛰️ Deploy satellite**. After deploying, one dialog asks whether to bring the empty rocket stage down safely (ticked by default; +1 public support) and where to go next: the Orbit Viewer, another launch, or the methane map. Advanced readouts and autopilot commands are folded away; the top bar labels **Game speed**, the flight labels **Flight speed**.
 
 ## The top bar
-Four views (keys `1`–`4`), the game clock with time warp (`Space` pause, `,` `.` slower/faster, from 1× up to 1 month per second), funds, public trust, science points, global warming, atmospheric methane, the satellite count, a news ticker, and **End round**.
+Four views (keys `1`–`4`), the game clock with time warp (`Space` pause, `,` `.` slower/faster, from 1× up to 1 month per second), funds, public trust, science points, global warming, atmospheric methane, the satellite count, a news ticker, and **End mission**, which ends the game and opens the mission report.
 
 | View | What you do there |
 |---|---|
@@ -94,7 +99,12 @@ js/nasa/gibs.js        NASA GIBS: map tiles, globe images, legends
 js/nasa/image-library.js  NASA Image and Video Library: launch-option photos
 js/ui.js               top bar, time controls, modals, toasts, chart helper
 js/view-*.js           one file per view (map, orbit, launch, ops)
+js/map-common.js       colour scales, legends and country borders shared by the game map and the report
+js/guide.js            tutorial, 💡 next-step hint, launch-day warp, flight hints, help
 js/main.js             boot, demo mode, main loop
+report/report.js       mission report shown on feedback.html (verdict, statistics, start/end maps, timelapse)
+report/report.css      its styles (all classes start with bmr-)
+settings/mission-settings.js  Mission settings panel on design.html (writes mbm.config)
 
 ```
 The `pure` files have no page code and can be tested in Node.

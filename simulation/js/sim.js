@@ -23,6 +23,9 @@ const SIM = (() => {
   const fmtDate = ms => new Date(ms).toISOString().slice(0, 10);
   const money = n => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
 
+  // difficulty settings, with the player's choice of how often random events happen
+  function makeDiff(cfg) { const d = DIFFICULTY[cfg.difficulty] || DIFFICULTY.director; return { ...d, eventRate: d.eventRate * (cfg.eventScale ?? 1) }; }
+
   /* ===================== countries ===================== */
   // level = emissions before policy cuts (grows at the country's own rate, slowed by abatement investment)
   // bauLevel = the same country in the no-action world; evidence = how much verified data regulators have
@@ -44,6 +47,11 @@ const SIM = (() => {
       Object.assign(c, { level: grown, bauLevel: grown, evidence: c.detections * 0.2, dataMB: 0, reports: 0 });
     }
     S.reports = S.reports || []; S.month = S.month || newMonth();
+    if (!S.money) { // older save: rebuild what the ledger still remembers
+      S.money = { spent: 0, earned: 0, by: {} };
+      S.ledger.forEach(e => { if (e.amount < 0) S.money.spent -= e.amount; else S.money.earned += e.amount; const k = moneyCategory(e.label); S.money.by[k] = (S.money.by[k] || 0) + e.amount; });
+    }
+    S.mapFrames = S.mapFrames || { every: 1, n: 0, frames: [] };
   }
 
   /* ===================== new game / load ===================== */
@@ -53,13 +61,13 @@ const SIM = (() => {
     for (const [iso, mt] of Object.entries(COUNTRY_CH4)) countries[iso] = newCountry(mt);
     const sites = SITES.map(s => ({ id: s.id, leaks: [], observations: 0, lastObs: 0, monitored: 0 }));
     S = {
-      v: 2, cfg, diff: DIFFICULTY[cfg.difficulty], t0, t: t0, tEnd: t0 + cfg.durationYears * YEAR * 1000,
+      v: 2, cfg, diff: makeDiff(cfg), t0, t: t0, tEnd: t0 + cfg.durationYears * YEAR * 1000,
       funds: cfg.startFunds, trust: 55, science: 0, budgetCutUntil: 0, launchDiscountUntil: 0,
       climate: { ch4: 1935, ch4_0: 1935, dTch4: 0, dT: 1.32, nonCH4_0: 1.32, anthro: 0, natural: 0 },
       countries, sites,
       satellites: [], debris: [], launches: [],
       designs: [], current: { name: 'MethaneSat-1', parts: {} },
-      log: [], decisions: [], ledger: [], history: [], reports: [], month: newMonth(),
+      log: [], decisions: [], ledger: [], history: [], reports: [], month: newMonth(), money: { spent: 0, earned: 0, by: {} }, mapFrames: { every: 1, n: 0, frames: [] },
       stats: { leaksDetected: 0, leaksFixed: 0, mtAvoided: 0, launches: 0, launchFailures: 0, satsLost: 0, passes: 0, dataMB: 0, grants: 0, missedLeaks: 0, scienceObs: 0 },
       nextMonth: t0 + 30.44 * DAY * 1000, nextRound: t0 + cfg.roundLengthMonths * 30.44 * DAY * 1000, roundStart: t0,
       warp: 3600, paused: true, ended: false, pending: null, flightActive: false,
@@ -68,6 +76,7 @@ const SIM = (() => {
     SITES.forEach((site, i) => { for (let k = 0; k < Math.round(site.leakRate * 0.35); k++) spawnLeak(i, true); });
     updateEmissions();
     pushHistory();
+    captureFrame(true);
     logEvent('info', `${cfg.agencyName} founded. Mission: find methane leaks and slow warming by ${new Date(S.tEnd).getUTCFullYear()}.`);
     return S;
   }
@@ -76,7 +85,7 @@ const SIM = (() => {
     const data = JSON.parse(json);
     if (!data || data.v !== 2) throw new Error('Incompatible save');
     S = data;
-    S.diff = DIFFICULTY[S.cfg.difficulty] || DIFFICULTY.director;
+    S.diff = makeDiff(S.cfg);
     S.satellites.forEach(rehydrate);
     upgradeCountries();
     S.paused = true; S.pending = null; S.flightActive = false;
@@ -111,8 +120,22 @@ const SIM = (() => {
     return d;
   }
   // Money in/out. Small recurring items are grouped per month so the ledger stays readable.
+  // categories for the mission report's money breakdown
+  function moneyCategory(label, group) {
+    const L = group || label || '';
+    if (/^Build/.test(L)) return 'Building satellites';
+    if (/^Launch/.test(L)) return 'Launches';
+    if (/^Mission operations/.test(L)) return 'Mission operations';
+    if (/^Recalibration/.test(L)) return 'Repairs & recalibration';
+    if (/Scrubbed|recovered after abort|Booster recovery/.test(L)) return 'Refunds & recovery credits';
+    return L;
+  }
   function ledger(amount, label, group) {
     S.funds += amount;
+    const M = S.money || (S.money = { spent: 0, earned: 0, by: {} });
+    if (amount < 0) M.spent -= amount; else M.earned += amount;
+    const cat = moneyCategory(label, group);
+    M.by[cat] = (M.by[cat] || 0) + amount;
     const key = group || label;
     const month = new Date(S.t).toISOString().slice(0, 7);
     const last = S.ledger.length ? S.ledger[S.ledger.length - 1] : null;
@@ -818,6 +841,7 @@ const SIM = (() => {
     S.trust += (52 - S.trust) * 0.004; // public attention fades toward neutral
     monthlyReport();
     pushHistory();
+    captureFrame();
     randomEvents();
     save();
     emit('month');
@@ -845,6 +869,31 @@ const SIM = (() => {
     const size = m.mb >= 1024 ? (m.mb / 1024).toFixed(1) + ' GB' : Math.round(m.mb) + ' MB';
     logEvent(q >= 0.6 ? 'good' : q < 0.2 ? 'bad' : 'info', `📑 Data report ${rep.month}: grade ${grade} · ${size}, ${m.det} leaks, ${nS} sites in ${isos.length} countries${grant ? ` · ${money(grant)} grant` : ''}.`);
     emit('report', rep);
+  }
+
+  // Map snapshot for the mission report's before / after maps and timelapse.
+  // Countries: emissions (Mt/yr). Sites: total regional emissions and leak flow (t/h), plus a ring code:
+  // r = big unreported leak, b = reported and awaiting repair, g = repaired, w = nothing special.
+  const COUNTRY_KEYS = Object.keys(COUNTRY_CH4);
+  function ringCode(i) {
+    const ls = S.sites[i].leaks;
+    if (ls.some(l => l.status === 'active' && l.rate > 20)) return 'r';
+    if (ls.some(l => l.status === 'reported')) return 'b';
+    if (ls.some(l => l.status === 'fixed') && !ls.some(l => l.status === 'active')) return 'g';
+    return 'w';
+  }
+  function captureFrame(force) {
+    const F = S.mapFrames || (S.mapFrames = { every: 1, n: 0, frames: [] });
+    if (!force && (F.n++ % F.every)) return;
+    F.frames.push({
+      t: S.t, ch4: +S.climate.ch4.toFixed(1), dT: +S.climate.dT.toFixed(3),
+      c: COUNTRY_KEYS.map(iso => +countryEmission(iso).now.toFixed(2)),
+      s: SITES.map((_, i) => Math.round(siteEmission(i).total)),
+      l: SITES.map((_, i) => +activeLeakRate(S.sites[i]).toFixed(1)),
+      r: SITES.map((_, i) => ringCode(i)).join(''),
+    });
+    // keep long games small: when there are too many frames, drop every other one and sample half as often
+    if (F.frames.length > 360) { const last = F.frames[F.frames.length - 1]; F.frames = F.frames.filter((_, i) => i % 2 === 0); if (F.frames[F.frames.length - 1] !== last) F.frames.push(last); F.every *= 2; }
   }
 
   function pushHistory() {
@@ -1035,28 +1084,56 @@ const SIM = (() => {
     const bau = S.climate.ch4bau || S.climate.ch4;
     const c = S.climate;
     const sats = S.satellites;
-    const climateScore = Math.max(0, Math.min(100, 40 + (bau - c.ch4) * 0.6));
+    // Everything is judged against the WHOLE planned mission, so quitting early (or doing nothing) can't score well.
+    const planned = Math.max(0.5, S.cfg.durationYears);
+    const played = years();
+    const completion = Math.max(0, Math.min(1, played / planned));
+    // ppb less methane than the no-action world. Without a single satellite the difference is just random leak noise, not the player's doing.
+    const prevented = S.stats.launches ? bau - c.ch4 : 0;
+    // methane rise expected over the full mission without you (measured once a few months have passed; ~15 ppb/yr before that)
+    const bauRise = played > 0.25 ? (bau - c.ch4_0) / played * planned : 15 * planned;
+    const effectiveness = Math.max(0, Math.min(1, prevented / Math.max(1, bauRise)));
+    const M = S.money || { spent: 0, earned: 0 };
+    const clamp100 = v => Math.max(0, Math.min(100, Math.round(v)));
     const sub = {
-      climate: Math.round(climateScore),
-      detection: Math.round(Math.min(100, S.stats.leaksDetected / Math.max(1, years()) * 4)),
-      science: Math.round(Math.min(100, S.science / Math.max(1, years()) / 15)),
-      trust: Math.round(S.trust),
-      budget: Math.round(Math.max(0, Math.min(100, 50 + S.funds / 40000))),
+      climate: clamp100(prevented / 60 * 100),                               // 60 ppb prevented = full marks; nothing changed = 0
+      detection: clamp100(S.stats.leaksDetected / planned / 60 * 100),      // 60 leaks per planned year = full marks
+      science: clamp100(S.science / planned / 6000 * 100),                  // 6,000 science points per planned year = full marks
+      trust: clamp100(S.trust * completion),                                // support only counts for the time you actually ran the agency
+      // money left over only counts if the agency actually flew a mission with it
+      budget: S.funds < 0 || !S.stats.launches ? 0 : clamp100(completion * 100 * (1 - M.spent / Math.max(1, S.cfg.startFunds + M.earned))),
     };
     const total = Math.round(sub.climate * 0.35 + sub.detection * 0.2 + sub.science * 0.15 + sub.trust * 0.15 + sub.budget * 0.15);
     const ranks = [[90, 'Guardian of Earth'], [75, 'Chief Engineer'], [60, 'Mission Specialist'], [40, 'Flight Controller'], [0, 'Rookie Director']];
     return {
       version: 1, reason, finishedAt: new Date().toISOString(), gameStart: fmtDate(S.t0), gameEnd: fmtDate(S.t),
       durationYears: S.cfg.durationYears, yearsPlayed: +years().toFixed(2), difficulty: S.cfg.difficulty, agencyName: S.cfg.agencyName,
-      score: total, stars: Math.max(1, Math.min(5, Math.round(total / 20))), rank: ranks.find(r => total >= r[0])[1], subscores: sub,
+      score: total, stars: Math.max(0, Math.min(5, Math.round(total / 20))), rank: ranks.find(r => total >= r[0])[1], subscores: sub,
+      completion: +completion.toFixed(3), effectiveness: +effectiveness.toFixed(3), expectedRisePpb: +bauRise.toFixed(1),
       climate: { ch4ppb: +c.ch4.toFixed(1), ch4ppbStart: c.ch4_0, ch4ppbBusinessAsUsual: +bau.toFixed(1), tempAnomalyC: +c.dT.toFixed(3), methaneWarmingC: +c.dTch4.toFixed(3), warmingAvoidedC: +(c.avoidedC || 0).toFixed(3), emissionsMtPerYear: +c.total.toFixed(1) },
       stats: { ...S.stats, mtAvoided: +S.stats.mtAvoided.toFixed(2), satellitesActive: sats.filter(s => s.status === 'active').length },
-      finances: { fundsRemaining: Math.round(S.funds), grants: Math.round(S.stats.grants) },
+      finances: (() => {
+        const M = S.money || { spent: 0, earned: 0, by: {} };
+        const cats = Object.entries(M.by).map(([label, amount]) => ({ label, amount: Math.round(amount) }));
+        return {
+          startFunds: S.cfg.startFunds, fundsRemaining: Math.round(S.funds), grants: Math.round(S.stats.grants),
+          totalSpent: Math.round(M.spent), totalEarned: Math.round(M.earned),
+          spending: cats.filter(c => c.amount < 0).sort((a, b) => a.amount - b.amount).map(c => ({ label: c.label, amount: -c.amount })),
+          income: cats.filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount),
+        };
+      })(),
       trust: +S.trust.toFixed(1), science: S.science,
       satellites: sats.map(s => ({ name: s.name, status: s.status, launched: fmtDate(s.launched), designScore: s.comp.score.total, detections: s.stats.detections, dataMB: Math.round(s.stats.downMB), altKm: Math.round((s.el.a - ORB.RE) / 1000), incDeg: +(s.el.i / ORB.DEG).toFixed(1) })),
       history: S.history.filter((_, i) => i % Math.max(1, Math.floor(S.history.length / 240)) === 0),
       decisions: S.decisions,
       reports: S.reports.slice(-36),
+      reportGrades: S.reports.reduce((g, x) => { g[x.grade] = (g[x.grade] || 0) + 1; return g; }, {}),
+      mapFrames: {
+        countries: COUNTRY_KEYS.map(Number),
+        sites: SITES.map(x => ({ name: x.name, lat: x.lat, lon: x.lon, type: x.type })),
+        types: Object.fromEntries(Object.entries(SITE_TYPES).map(([k, t]) => [k, { label: t.label, color: t.color }])),
+        frames: (S.mapFrames || { frames: [] }).frames,
+      },
       regions: Object.keys(S.countries).map(iso => ({ iso: +iso, ...countryEmission(iso) })).sort((a, b) => b.now - a.now).slice(0, 25)
         .map(e => ({ iso: e.iso, emissionsMt: +e.now.toFixed(2), startMt: e.base, noActionMt: +e.bau.toFixed(2), changePct: +(e.trend * 100).toFixed(1), policyCutPct: +(e.mitigation * 100).toFixed(1), leaksReported: e.detections })),
     };
@@ -1064,6 +1141,7 @@ const SIM = (() => {
   function end(reason) {
     if (S.ended) return;
     S.ended = true; S.paused = true;
+    captureFrame(true);
     const r = results(reason);
     safeSet(STORE.results, JSON.stringify(r));
     save();

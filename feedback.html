@@ -213,6 +213,9 @@ details summary::-webkit-details-marker{display:none}
 .draw{stroke-dasharray:2000;stroke-dashoffset:2000;animation:draw 1.6s ease-out forwards}
 @keyframes draw{to{stroke-dashoffset:0}}
 </style>
+<!-- Mission: Blue Marble mission report (shown when the simulation sends the player here) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="simulation/report/report.css">
 </head>
 <body>
 <div class="wrap">
@@ -1205,5 +1208,11 @@ flyAgain=function(){location.href=REVIEW_PAGE;};
  S.step=6; render();
 })();
 </script>
+<!-- Mission: Blue Marble mission report: verdict, statistics, start/end methane maps and timelapse -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="simulation/js/nasa/gibs.js"></script>
+<script src="simulation/js/map-common.js"></script>
+<script src="simulation/report/report.js"></script>
 </body>
 </html>

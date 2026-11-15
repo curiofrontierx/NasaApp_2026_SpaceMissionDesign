@@ -94,7 +94,7 @@ const UI = (() => {
     $('#btn-pause').addEventListener('click', () => togglePause());
     $('#btn-faster').addEventListener('click', faster);
     $('#btn-slower').addEventListener('click', slower);
-    $('#btn-round').addEventListener('click', confirmEndRound);
+    $('#btn-round').addEventListener('click', endButton);
     document.addEventListener('keydown', e => {
       if (e.target.closest('input, textarea, select') || $('#modal').open) return;
       if (SIM.state && SIM.state.flightActive && current === 'launch') return; // flight keys
@@ -112,14 +112,18 @@ const UI = (() => {
     SIM.on('pending', p => { if (p) showPending(p); });
     SIM.on('launchReady', L => {
       updateTop(true);
-      modal(`<h2>🚀 Launch day</h2><p>${esc(L.qty)}× <b>${esc(L.designName)}</b> is on the pad. The world clock is paused until you fly or scrub.</p>
-        <div class="modal-actions"><button class="btn ghost" id="m-later">Later</button><button class="btn" id="m-go">Go to launch</button></div>`);
+      if (typeof LaunchView !== 'undefined' && LaunchView.autoFly(L)) return;
+      const waited = typeof GUIDE !== 'undefined' ? GUIDE.warpSummaryHTML() : '';
+      modal(`<h2>🚀 Launch day</h2><p>${esc(L.qty)}× <b>${esc(L.designName)}</b> is on the pad. The world clock is paused until you fly or scrub.</p>${waited}
+        <div class="modal-actions"><button class="btn ghost" id="m-later">Later</button><button class="btn ghost" id="m-go">🚀 Go to the pad</button><button class="btn" id="m-orbit">⏭ Warp to orbit</button></div>`);
       $('#m-later').onclick = closeModal;
-      $('#m-go').onclick = () => { closeModal(); show('launch'); };
+      $('#m-orbit').onclick = () => { closeModal(); LaunchView.flyToOrbit(L); };
+      $('#m-go').onclick = () => { closeModal(); show('launch'); setTimeout(() => { const b = document.querySelector(`[data-fly="${L.id}"]`); if (b) b.click(); }, 60); };
     });
     SIM.on('report', r => { if (SIM.state.warp <= 604800 && r.grade !== 'F') toast(`Grade ${r.grade}: ${r.detections} leaks, ${r.sites} sites in ${r.countries.length} countries${r.grant ? `, ${fmt$(r.grant)} grant` : ''}. Regulators in those countries feel the pressure.`, r.quality >= 0.6 ? 'good' : '', 'Monthly data report'); });
-    SIM.on('roundDue', () => toast(`A ${SIM.state.cfg.roundLengthMonths}-month round is complete. Use “End round” to review your strategy, or keep playing.`, 'warn', 'Round'));
     SIM.on('ended', showEnd);
+    // a decision that came up before the page was ready (e.g. while fast-forwarding) still needs an answer
+    if (SIM.state && SIM.state.pending) setTimeout(() => showPending(SIM.state.pending), 0);
   }
 
   function showPending(p) {
@@ -128,33 +132,38 @@ const UI = (() => {
     $$('#modal-body [data-opt]').forEach(b => b.onclick = () => { closeModal(); SIM.resolvePending(b.dataset.opt); updateTop(true); });
   }
 
-  function confirmEndRound() {
-    const S = SIM.state; if (!S) return;
-    const sum = SIM.roundSummary();
+  // The player can end the mission at any time; the report opens on the Feedback page.
+  function confirmEndMission() {
+    const S = SIM.state; if (!S || S.ended) return;
     S.paused = true; updateTop(true);
-    modal(`<h2>End this round?</h2>
-      <p>Your progress is saved and the round summary is sent to the Feedback page. Come back to the Simulation page to continue from ${esc(sum.to)}.</p>
-      <div class="kv"><span>Round</span><b>${esc(sum.from)} → ${esc(sum.to)}</b><span>Leaks reported this round</span><b>${sum.leaksDetectedThisRound}</b>
-      <span>Leaks fixed this round</span><b>${sum.leaksFixedThisRound}</b><span>Methane change</span><b>${sum.ch4Change > 0 ? '+' : ''}${sum.ch4Change} ppb</b>
-      <span>Decisions logged</span><b>${sum.decisions.length}</b></div>
-      <div class="modal-actions"><button class="btn ghost" id="m-cancel">Keep playing</button><button class="btn" id="m-end">End round → Feedback</button></div>`);
+    const left = Math.max(0, (S.tEnd - S.t) / (365.25 * 86400000));
+    modal(`<h2>End the mission now?</h2>
+      <p>Your agency stops here and the final mission report opens on the Feedback page.</p>
+      ${left > 0.05 ? `<div class="note warn"><b>${left.toFixed(1)} of ${S.cfg.durationYears} years are still left.</b> The review measures what you achieved against the <b>whole</b> ${S.cfg.durationYears}-year mission, so ending early lowers your score${left / S.cfg.durationYears > 0.75 ? ', and ending this soon counts as an abandoned mission' : ''}.</div>` : ''}
+      <div class="kv"><span>Leaks reported / fixed</span><b>${S.stats.leaksDetected} / ${S.stats.leaksFixed}</b><span>Satellites active</span><b>${S.satellites.filter(s => s.status === 'active').length}</b>
+      <span>Methane vs no-action world</span><b>${(S.climate.ch4 - (S.climate.ch4bau || S.climate.ch4)).toFixed(1)} ppb</b></div>
+      <div class="modal-actions"><button class="btn ghost" id="m-cancel">Keep playing</button><button class="btn" id="m-end">End mission → report</button></div>`);
     $('#m-cancel').onclick = closeModal;
-    $('#m-end').onclick = () => { SIM.endRound(); location.href = PAGES.feedback; };
+    $('#m-end').onclick = () => { closeModal(); endedByPlayer = true; SIM.end('ended'); };
   }
+  let endedByPlayer = false;
+  const REPORT_URL = () => PAGES.results + (PAGES.results.includes('?') ? '&' : '?') + 'from=simulation';
 
   function showEnd(r) {
     updateTop(true);
-    const why = { complete: `The ${r.durationYears}-year mission is complete.`, bankrupt: 'Your agency ran out of money and went bankrupt.', trust: 'Public support fell to zero. You were removed as Mission Director.', tipping: 'Warming reached the +2.5°C tipping point.' }[r.reason] || 'Game over.';
+    if (endedByPlayer) { location.href = REPORT_URL(); return; }
+    const why = { complete: `The ${r.durationYears}-year mission is complete.`, ended: 'You ended the mission.', bankrupt: 'Your agency ran out of money and went bankrupt.', trust: 'Public support fell to zero. You were removed as Mission Director.', tipping: 'Warming reached the +2.5°C tipping point.' }[r.reason] || 'Game over.';
     modal(`<h2>${r.reason === 'complete' ? '🏁 Mission complete' : '⚠️ Game over'}</h2><p>${esc(why)}</p>
       <div class="score-row" style="margin:12px 0"><div class="ring" style="--p:${r.score};--c:var(--good)"><b>${r.score}</b><small>/100</small></div>
       <div><div style="font-size:18px;font-weight:700;color:var(--accent-2)">${esc(r.rank)}</div>${starsHTML(r.stars)}</div></div>
-      <div class="kv"><span>Methane</span><b>${r.climate.ch4ppb} ppb (no-action world: ${r.climate.ch4ppbBusinessAsUsual})</b>
-      <span>Warming avoided</span><b>${r.climate.warmingAvoidedC.toFixed(3)}°C</b><span>Leaks reported / fixed</span><b>${r.stats.leaksDetected} / ${r.stats.leaksFixed}</b>
-      <span>Methane avoided</span><b>${r.stats.mtAvoided} Mt</b></div>
-      <div class="modal-actions"><button class="btn ghost" id="m-stay">Stay and look around</button><button class="btn" id="m-results">See results →</button></div>`);
-    $('#m-stay').onclick = closeModal;
-    $('#m-results').onclick = () => { location.href = PAGES.results; };
+      <p class="fine" id="m-count">Opening the mission report in 8 s…</p>
+      <div class="modal-actions"><button class="btn ghost" id="m-stay">Stay and look around</button><button class="btn" id="m-results">See the mission report →</button></div>`);
+    let n = 8;
+    const timer = setInterval(() => { n--; const el = $('#m-count'); if (el) el.textContent = `Opening the mission report in ${n} s…`; if (n <= 0) { clearInterval(timer); location.href = REPORT_URL(); } }, 1000);
+    $('#m-stay').onclick = () => { clearInterval(timer); closeModal(); UI.toast('The mission is over. Use “Mission report” in the top bar when you are ready.', '', 'Mission over'); $('#btn-round').textContent = '📄 Mission report'; };
+    $('#m-results').onclick = () => { clearInterval(timer); location.href = REPORT_URL(); };
   }
+  function endButton() { if (SIM.state && SIM.state.ended) location.href = REPORT_URL(); else confirmEndMission(); }
 
   return { register, show, active, toast, modal, closeModal, setWarp, faster, slower, togglePause, updateTop, bind, WARPS };
 })();

@@ -14,8 +14,8 @@ Page links are at the top of `simulation/js/config.js` (`PAGES`):
 | `start` | `index.html` | Link in Mission Control |
 | `design` | `design.html` | "Change the design" in the Launch view; link in Mission Control |
 | `nasaData` | `nasa-data.html` | Link in Mission Control |
-| `feedback` | `feedback.html` | **End round** goes here |
-| `results` | `feedback.html` | The game end goes here |
+| `feedback` | `feedback.html` | (same page as `results`) |
+| `results` | `feedback.html?from=simulation` | The mission report: opened when time runs out, on game over, or when the player presses **End mission** |
 
 ## What simulation.html READS
 
@@ -31,16 +31,18 @@ Page links are at the top of `simulation/js/config.js` (`PAGES`):
 - Pressing **Simulate** again with a changed design adds or replaces that design in the running game. A new `missionName` adds a second design, so the player can fly several kinds of satellite.
 - If you add a part to `parts.js`, add the same part (with its engineering numbers) to `simulation/js/catalog.js`, or it is skipped with a console warning.
 
-### `mbm.config` (optional)
+### `mbm.config`: the game conditions, written by the **Mission settings** panel on design.html
+
+`simulation/settings/mission-settings.js` (loaded by design.html after `simulation/js/config.js`) adds the panel and saves every change immediately:
 
 ```json
-{ "agencyName": "Blue Marble Space Agency", "playerName": "Director", "durationYears": 25, "difficulty": "director",
-  "startFunds": 1500000, "annualBudget": 900000, "startDate": "2027-01-01T00:00:00Z", "roundLengthMonths": 12 }
+{ "agencyName": "Blue Marble Space Agency", "durationYears": 25, "difficulty": "director",
+  "startFunds": 1500000, "annualBudget": 900000, "startDate": "2027-01-01T00:00:00Z", "eventScale": 1 }
 ```
 
-- Every field is optional, and no page writes this key yet, so these defaults apply.
-- `difficulty` is `cadet`, `director` or `crisis`.
-- If `durationYears`, `startDate` or `difficulty` differ from the saved game, a new game starts.
+- `durationYears` 1–100; `difficulty` `cadet`, `director` or `crisis`; `startFunds` and `annualBudget` in US dollars; `startDate` 1 January of 2026–2040; `eventScale` 0.5 (rare), 1 (normal) or 1.8 (frequent) random events.
+- Missing or out-of-range values fall back to the defaults above (`DEFAULT_CONFIG` in `simulation/js/config.js`).
+- Changing anything except `agencyName` starts a new game the next time simulation.html opens; otherwise the saved game continues. The panel warns about this when a game is in progress.
 - URL overrides for tests: `simulation.html?years=50&difficulty=crisis`. `?new=1` forces a fresh game.
 
 ## What simulation.html WRITES
@@ -49,7 +51,7 @@ Page links are at the top of `simulation/js/config.js` (`PAGES`):
 
 ```json
 {
-  "reason": "complete | bankrupt | trust | tipping",
+  "reason": "complete | ended | bankrupt | trust | tipping",
   "score": 74, "stars": 4, "rank": "Mission Specialist",
   "subscores": { "climate": 70, "detection": 85, "science": 90, "trust": 61, "budget": 55 },
   "durationYears": 25, "yearsPlayed": 25, "difficulty": "director", "agencyName": "...",
@@ -62,32 +64,32 @@ Page links are at the top of `simulation/js/config.js` (`PAGES`):
 }
 ```
 
-- Score weights: climate 35%, leak detection 20%, science 15%, trust 15%, budget 15%. Ranks run from Rookie Director to Guardian of Earth.
+- Score weights: climate 35%, leak detection 20%, science 15%, trust 15%, budget 15%. Ranks run from Rookie Director to Guardian of Earth. Stars = score / 20 (0–5).
+- Every sub-score is measured against the **whole planned mission** (`durationYears`), so ending early or doing nothing can't score well:
+  - climate: ppb of methane prevented vs the no-action world, full marks at 60 ppb (0 if no satellite was ever deployed: the difference is then only random noise);
+  - leak detection: leaks reported ÷ planned years, full marks at 60 per year; science: points ÷ planned years, full marks at 6,000 per year;
+  - trust and budget: scaled by `completion` (share of the mission actually played); budget is 0 if no satellite was deployed or the agency is in debt.
+- `completion` (0–1), `effectiveness` (0–1: share of the methane rise expected over the full mission that was prevented) and `expectedRisePpb` are included.
 - `ch4ppbBusinessAsUsual` is a "nobody did anything" world, so feedback.html can show what the player changed.
 - `history` is monthly (about 240 points at most) and ready to chart.
 - `reports`: the last 36 monthly data reports: `{ month, grade (A–F), quality (0–1), mb, detections, attributed, sites, countries: [ISO codes], grant }`.
 - `regions`: the 25 biggest emitting countries: `{ iso (numeric ISO 3166), emissionsMt, startMt, noActionMt, changePct, policyCutPct, leaksReported }`. This shows where the player's data changed the world and where it didn't.
 
-> **Note for the feedback.html owner:** feedback.html currently reads only its own keys (`methane-tycoon-design`, `methane-tycoon-lastflight`) and shows "No mission report yet" without them. To show the simulation's results, read `mbm.results`, for example:
-> ```js
-> let sim = null; try { sim = JSON.parse(localStorage.getItem('mbm.results') || 'null'); } catch {}
-> if (sim) { /* show sim.score, sim.stars, sim.rank, sim.climate, sim.stats, sim.history … */ }
-> ```
+- `reason`: `complete` (time ran out), `ended` (the player pressed **End mission**), or a game over (`bankrupt`, `trust`, `tipping`).
+- `finances` also has `startFunds`, `totalSpent`, `totalEarned`, and `spending` / `income` broken down by category (`[{ label, amount }]`, largest first).
+- `reportGrades`: how many monthly data reports got each grade, e.g. `{ "A": 51, "B": 9 }`.
+- `mapFrames`: snapshots of the methane map for the report's before / after maps and timelapse:
+  `{ countries: [ISO numbers], sites: [{ name, lat, lon, type }], types: { oilgas: { label, color }, … }, frames: [{ t, ch4, dT, c: [Mt/yr per country], s: [t/h per site region], l: [t/h of active leaks per site], r: "ring code per site" }] }`.
+  Ring codes: `r` big unreported leak, `b` reported and awaiting repair, `g` repaired, `w` nothing special. Frames are monthly; long games keep at most ~360 (older months are thinned, the first and last are always kept).
 
-### `mbm.round`: when the player presses **End round**, then the page opens feedback.html
+### The mission report on feedback.html
 
-```json
-{
-  "from": "2027-01-01", "to": "2028-01-01", "yearsPlayed": 1.0, "durationYears": 25,
-  "funds": 1830000, "trust": 63.2, "science": 4200,
-  "ch4": 1947.3, "dT": 1.343, "ch4Change": 12.3, "dTChange": 0.021,
-  "leaksDetectedThisRound": 87, "leaksFixedThisRound": 55,
-  "activeSatellites": [{ "name": "MethaneWatch-1", "altKm": 548, "incDeg": 97.6, "detections": 60, "score": 77 }],
-  "decisions": [ "...decisions made during this round..." ]
-}
-```
+feedback.html loads `simulation/report/report.js` and `report.css` (plus Leaflet, topojson-client, `simulation/js/nasa/gibs.js` and `simulation/js/map-common.js`). Everything sits in one function and every CSS class starts with `bmr-`, so it does not touch feedback.html's own code or styles.
 
-To continue, link back to `simulation.html` **without** `?new=1`; the game resumes from its save.
+- It shows the report when the page is opened as `feedback.html?from=simulation` (what the Simulation page does), or when `mbm.results` exists and there is no report from feedback.html's own design game.
+- If both exist and the page is opened without `from=simulation`, feedback.html's own report shows with a link bar to the mission report. `feedback.html?view=flight` always shows feedback.html's own report.
+- Contents: verdict (success / partial success / failed) with score, stars and rank; how effective the mission was (methane vs the no-action world, warming avoided, methane kept out of the air, leaks); score breakdown; charts; statistics (money spent and received, funds, satellites deployed / working / lost, data, data reports); where the money went and came from; satellites; countries; and at the bottom the methane map at the start and at the end side by side, plus a timelapse with play / pause, speed and a slider. Countries can be coloured by emissions or by change since the start; sites by source or by amount, exactly like the game's map.
+- Verdict rule: a game over is a failure; ending the mission in its first quarter is "Mission abandoned". Otherwise it is a success when the score is at least 60, the climate sub-score at least 45 and effectiveness at least 8%; a partial success when effectiveness is at least 2% or the score at least 40; and a failure otherwise.
 
 ### `mbm.decisions`: the decision log with explanations before and after each choice
 
