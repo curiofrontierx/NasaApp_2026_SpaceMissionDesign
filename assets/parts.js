@@ -49,8 +49,10 @@ const OPTIONS = {
     { id: 'lwir',  name: 'LWIR Thermal Gas Imager',        cost: 19000, desc: '75% effectiveness. Tracks methane plumes by heat, day and night. Less accurate over frozen tundra or oceans.' },
     { id: 'zoom',  name: 'Point-Source Zoom Spectrometer', cost: 26000, desc: '90% effectiveness. High-resolution SWIR interferometer that pinpoints leaking facilities. Needs precise steering and clear skies.' },
     { id: 'lidar', name: 'Active TDLAS Methane LIDAR',     cost: 38000, desc: '100% effectiveness. Own infrared laser detects methane 24/7 over land or ocean, no false alarms. Very heavy, drains lots of power.' }
-  ]
+  ],
+  // Launch sites come from assets/sites.js (load it before this file). No launch fee.
+  site: LAUNCH_SITES.map(s => ({ ...s, cost: 0 }))
 };
 
-const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector' };
-const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir' };
+const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector', site: 'Launch site' };
+const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir', site: 'cape' };

@@ -1,20 +1,10 @@
-// Launch-site weather for the NASA Data page, read from live NASA GIBS imagery.
-// Uses $ from nasa-data.js. The result is saved to localStorage (cfx.launch.v1) for the simulation page.
+// Launch-site weather read from live NASA GIBS imagery (no DOM code; the Design page shows the results).
+// The Design page saves the result to localStorage (cfx.launch.v1) for the simulation page.
 const LAUNCH_KEY = 'cfx.launch.v1';
 const GIBS_TILES = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
 const WX_DATE = new Date(Date.now() - 864e5).toISOString().slice(0, 10); // daily layers lag ~1 day
 
-const LAUNCH_SITES = [
-  { id: 'cape',        name: 'Cape Canaveral, USA',   lat: 28.5,  lon: -80.6 },
-  { id: 'vandenberg',  name: 'Vandenberg, USA',       lat: 34.7,  lon: -120.6 },
-  { id: 'kourou',      name: 'Kourou, French Guiana', lat: 5.2,   lon: -52.8 },
-  { id: 'baikonur',    name: 'Baikonur, Kazakhstan',  lat: 45.9,  lon: 63.3 },
-  { id: 'plesetsk',    name: 'Plesetsk, Russia',      lat: 62.9,  lon: 40.6 },
-  { id: 'sriharikota', name: 'Sriharikota, India',    lat: 13.7,  lon: 80.2 },
-  { id: 'wenchang',    name: 'Wenchang, China',       lat: 19.6,  lon: 110.95 },
-  { id: 'tanegashima', name: 'Tanegashima, Japan',    lat: 30.4,  lon: 131.0 },
-  { id: 'mahia',       name: 'Mahia Peninsula, NZ',   lat: -39.3, lon: 177.9 }
-];
+// LAUNCH_SITES comes from assets/sites.js; the player picks the site on the Design page.
 
 // Live GOES geostationary imagery ("default" time = latest image, about 10 minutes old).
 const GOES = { east: { name: 'GOES-East', minLon: -110, maxLon: -20 }, west: { name: 'GOES-West', minLon: -180, maxLon: -110 } };
@@ -99,52 +89,3 @@ function judgeWeather(w) {
   if (w.cloud > 0.5 || w.wind > 11) return { verdict: 'HOLD', risk: 0.1, reasons: ['Marginal clouds or wind'] };
   return { verdict: 'GO', risk: 0.02, reasons: ['Weather within limits'] };
 }
-// ---------- UI ----------
-let chosenSite = LAUNCH_SITES[0];
-$('site').innerHTML = LAUNCH_SITES.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-try {
-  const prev = JSON.parse(localStorage.getItem(LAUNCH_KEY));
-  if (prev && LAUNCH_SITES.some(s => s.id === prev.site.id)) { chosenSite = LAUNCH_SITES.find(s => s.id === prev.site.id); showWeather(prev); }
-} catch { /* ignore */ }
-$('site').value = chosenSite.id;
-$('site').onchange = e => { chosenSite = LAUNCH_SITES.find(s => s.id === e.target.value); clearWeather(); };
-
-function clearWeather() {
-  ['wSrc', 'wCloud', 'wStorm', 'wWind', 'wVerdict'].forEach(id => { $(id).textContent = '—'; $(id).className = ''; });
-  $('wReasons').textContent = 'Press "Check weather" to read live NASA imagery.';
-  $('wImg').removeAttribute('src');
-}
-
-function showWeather(rec) {
-  const w = rec.weather, j = rec.judge;
-  $('wSrc').textContent = w.source;
-  $('wCloud').textContent = `${Math.round(w.cloud * 100)}%`;
-  $('wStorm').textContent = w.storm ? '⚡ Yes' : 'No';
-  $('wWind').textContent = `${w.wind} m/s`;
-  $('wVerdict').textContent = `${j.verdict} (launch failure risk ${Math.round(j.risk * 100)}%)`;
-  $('wVerdict').className = j.verdict === 'GO' ? 'ok' : j.verdict === 'HOLD' ? 'warn' : 'bad';
-  $('wReasons').textContent = `${j.reasons.join('. ')}. Checked ${new Date(rec.checkedAt).toLocaleString()}.`;
-}
-
-// Shows the live satellite picture around the site (GOES GeoColor if covered, else yesterday's MODIS).
-async function showSiteImage(site) {
-  const sat = goesFor(site.lon);
-  const tile = await loadTile(sat ? goesUrl(sat, 'GeoColor', 7) : MODIS_TRUE, site.lat, site.lon, 6);
-  if (!tile) { $('wImgNote').textContent = 'No image available for this site.'; return; }
-  const ctx = tile.canvas.getContext('2d');
-  ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(tile.t.px, tile.t.py, 8, 0, 2 * Math.PI); ctx.stroke();
-  $('wImg').src = tile.canvas.toDataURL();
-  $('wImgNote').textContent = `${sat ? `${GOES[sat].name} GeoColor (live)` : `MODIS Terra true colour (${WX_DATE})`} · red circle = launch site`;
-}
-
-$('weatherBtn').onclick = async () => {
-  $('weatherBtn').disabled = true;
-  $('wReasons').textContent = 'Reading NASA GIBS imagery…';
-  const weather = await readWeather(chosenSite.lat, chosenSite.lon);
-  const rec = { site: chosenSite, weather, judge: judgeWeather(weather), checkedAt: new Date().toISOString() };
-  localStorage.setItem(LAUNCH_KEY, JSON.stringify(rec));
-  showWeather(rec);
-  await showSiteImage(chosenSite);
-  $('weatherBtn').disabled = false;
-};
