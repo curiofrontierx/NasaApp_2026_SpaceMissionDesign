@@ -48,6 +48,28 @@
     </div>
 
     <section class="panel">
+      <h2>Launch Site Weather</h2>
+      <p class="muted">Pick a spaceport and check today's weather from live NASA satellite imagery. The result is saved in your browser for the launch.</p>
+      <div class="grid">
+        <div>
+          <label for="site">Launch site</label>
+          <select id="site"></select>
+          <button id="weatherBtn">🌦 Check weather</button>
+          <div class="stat"><span>Data source</span><span id="wSrc">—</span></div>
+          <div class="stat"><span>Cloud cover</span><span id="wCloud">—</span></div>
+          <div class="stat"><span>Thunderstorms</span><span id="wStorm">—</span></div>
+          <div class="stat"><span>Wind (simulated)</span><span id="wWind">—</span></div>
+          <div class="stat"><span>Launch decision</span><span id="wVerdict">—</span></div>
+          <p id="wReasons" class="muted">Press "Check weather" to read live NASA imagery.</p>
+        </div>
+        <div>
+          <img id="wImg" class="map" alt="Satellite image around the launch site">
+          <p id="wImgNote" class="muted"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2 id="mapTitle">Imagery</h2>
       <img id="map" class="map" alt="NASA GIBS imagery">
       <p class="muted" id="mapStatus"></p>
@@ -57,5 +79,6 @@
     <footer>An independent team project. This is not an official NASA website.</footer>
   </main>
   <script src="assets/nasa-data.js"></script>
+  <script src="assets/nasa-weather.js"></script>
 </body>
 </html>
