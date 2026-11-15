@@ -1,6 +1,6 @@
 // Parts catalog for the Design Configuration page. Prices in US dollars.
 // Storage/transmitter prices listed as a range use the midpoint of that range.
-const BUDGET = 260000;
+// The budget is shared with the simulation: the Design page reads the agency's funds (see agencyBudget in design.js).
 
 const OPTIONS = {
   battery: [
@@ -10,7 +10,7 @@ const OPTIONS = {
     { id: 'liion100', name: 'Large CubeSat Li-Ion (100 Wh)', cost: 18500,  desc: '75% effectiveness. Flight-proven pack (100 Wh, 0.80 kg). Handles midday orbits and heaters, but cannot power Active LIDAR + TBIRD Laser together.' },
     { id: 'solid',    name: 'Solid-State Prototype',         cost: 35000,  desc: '85% effectiveness (high risk). Experimental 150 Wh, 0.40 kg cell. Saves launch mass, but 15% random failure risk in orbit (−1.5 stars).' },
     { id: 'ves',      name: 'Space-Grade VES Module',        cost: 65000,  desc: '90% effectiveness. Saft VES module (1,000 Wh, 6.50 kg). Survives 12+ years, but needs at least a Hydrazine thruster.' },
-    { id: 'rtg',      name: 'Mini-RTG Nuclear Source',       cost: 450000, desc: '100% effectiveness (deep space). Constant 100 W, 45.0 kg. Exceeds the $260,000 budget by itself (trap item).' }
+    { id: 'rtg',      name: 'Mini-RTG Nuclear Source',       cost: 450000, desc: '100% effectiveness (deep space). Constant 100 W, 45.0 kg. Very expensive: eats a large share of the agency budget (trap item).' }
   ],
   thruster: [
     { id: 'coldgas',     name: 'Cold Gas Thruster (Nitrogen)',     cost: 15000,  desc: '25% effectiveness. Nitrogen jets (0.8 kg). Cannot reach polar orbits; too imprecise to aim Zoom Spectrometers or directional dishes.' },
@@ -28,7 +28,7 @@ const OPTIONS = {
     { id: 'rh3480',    name: 'Mercury RH3480 SSDR',       cost: 80000,  desc: '480 GB, SRIO 3.125 Gbps, 0.75 kg, up to 25 W, >100 krad. Capacity ★★★, Speed ★★★★, Radiation ★★★★★, Cost ★★, Mass/Power ★★★.' },
     { id: 'simplistor', name: 'Frontgrade SimpliStor SSDR', cost: 120000, desc: '2.5 TB, 10 Gbps Ethernet, ~1.2 kg, <25 W, 30–50 krad. Capacity ★★★★, Speed ★★★★, Radiation ★★★, Cost ★★, Mass/Power ★★★.' },
     { id: 'spacestor', name: 'Frontgrade SpaceStor 4TB MMU', cost: 150000, desc: '3.97 TB, PCIe 4 Gbps, ~1.2 kg, <15 W, up to 50 krad. Capacity ★★★★, Speed ★★★, Radiation ★★★★, Cost ★★, Mass/Power ★★★.' },
-    { id: 'moog',      name: 'Moog Scalable SSR (6U)',    cost: 375000, desc: '1–10 TB, up to 100 Gbps, 3.5–6 kg, 30–60 W, 100+ krad. Capacity ★★★★★, Speed ★★★★★, Radiation ★★★★★, Cost ★, Mass/Power ★. Over budget alone.' }
+    { id: 'moog',      name: 'Moog Scalable SSR (6U)',    cost: 375000, desc: '1–10 TB, up to 100 Gbps, 3.5–6 kg, 30–60 W, 100+ krad. Capacity ★★★★★, Speed ★★★★★, Radiation ★★★★★, Cost ★, Mass/Power ★. Very expensive.' }
   ],
   transmitter: [
     { id: 'uhf',     name: 'EnduroSat UHF Transceiver II',  cost: 7900,   desc: 'UHF, 19.6 kbps, 195 g, 5.5 W. Speed ★, Weather ★★★★★, Aiming ★★★★★, Cost ★★★★★, Mass/Power ★★★★★.' },
@@ -40,7 +40,7 @@ const OPTIONS = {
     { id: 'ewc34',   name: 'Syrlinks EWC34 High-Speed Tx',  cost: 77500,  desc: 'X-Band, 600 Mbps, ~500 g, 20–25 W. Speed ★★★★, Weather ★★★★, Aiming ★★★, Cost ★★, Mass/Power ★★★.' },
     { id: 'cubelct', name: 'TESAT CubeLCT 100M (Laser)',    cost: 125000, desc: 'Optical 1550 nm, 100 Mbps, ~380 g, 8–10 W. Speed ★★★, Weather ★, Aiming ★, Cost ★★, Mass/Power ★★★★.' },
     { id: 'xsdr',    name: 'EnduroSat X-Band SDR',          cost: 180000, desc: 'X-Band, 1+ Gbps, ~800 g, 25–35 W. Speed ★★★★, Weather ★★★★, Aiming ★★★, Cost ★, Mass/Power ★★.' },
-    { id: 'scot80',  name: 'TESAT SCOT80 Laser Terminal',   cost: 575000, desc: 'Optical, 10–100 Gbps, 11.9 kg, 60–80 W. Speed ★★★★★, Weather ★, Aiming ★, Cost ★, Mass/Power ★. Over budget alone.' }
+    { id: 'scot80',  name: 'TESAT SCOT80 Laser Terminal',   cost: 575000, desc: 'Optical, 10–100 Gbps, 11.9 kg, 60–80 W. Speed ★★★★★, Weather ★, Aiming ★, Cost ★, Mass/Power ★. Very expensive.' }
   ],
   detector: [
     { id: 'nir',   name: 'Basic NIR Context Camera',       cost: 3500,  desc: '25% effectiveness. Daytime reference photos to tell a factory from a farm. Cannot see methane; blocked by clouds and night.' },
@@ -49,8 +49,22 @@ const OPTIONS = {
     { id: 'lwir',  name: 'LWIR Thermal Gas Imager',        cost: 19000, desc: '75% effectiveness. Tracks methane plumes by heat, day and night. Less accurate over frozen tundra or oceans.' },
     { id: 'zoom',  name: 'Point-Source Zoom Spectrometer', cost: 26000, desc: '90% effectiveness. High-resolution SWIR interferometer that pinpoints leaking facilities. Needs precise steering and clear skies.' },
     { id: 'lidar', name: 'Active TDLAS Methane LIDAR',     cost: 38000, desc: '100% effectiveness. Own infrared laser detects methane 24/7 over land or ocean, no false alarms. Very heavy, drains lots of power.' }
-  ]
+  ],
+  // Launch sites come from assets/sites.js (load it before this file). No launch fee.
+  site: LAUNCH_SITES.map(s => ({ ...s, cost: 0 }))
 };
 
-const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector' };
-const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir' };
+const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector', site: 'Launch site' };
+const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir', site: 'cape' };
+
+// How good each part is (0–100), shown as bars on the Design page.
+// Battery, thruster, detector: the catalog's effectiveness %.
+// Storage: average of the catalog's capacity, speed, radiation and mass/power stars (cost left out; the budget covers it).
+// Transmitter: (3 × downlink speed + weather + aiming + mass/power stars) / 30, since speed matters most for getting data down.
+const RATINGS = {
+  battery: { nicd: 30, nih2: 45, liion40: 60, liion100: 75, solid: 85, ves: 90, rtg: 100 },
+  thruster: { coldgas: 25, resistojet: 40, hydrazine: 60, ascent: 75, electrospray: 85, dualmode: 92, hall: 100 },
+  storage: { a3200: 40, kryten: 50, cfc400: 60, rh3480: 75, simplistor: 70, spacestor: 70, moog: 80 },
+  transmitter: { uhf: 60, sband: 53, srs4: 63, ewc27: 67, xband: 63, xlink: 73, ewc34: 73, cubelct: 50, xsdr: 70, scot80: 60 },
+  detector: { nir: 25, swir: 60, mwir: 65, lwir: 75, zoom: 90, lidar: 100 }
+};
