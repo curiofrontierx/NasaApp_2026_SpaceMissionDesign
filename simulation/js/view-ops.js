@@ -9,7 +9,7 @@ const OpsView = (() => {
     built = true;
     $('#ops').innerHTML = `
       <div class="row" style="justify-content:space-between;margin:0"><div><h2 style="font-size:22px" id="ops-title"></h2><div class="fine" style="margin:2px 0 0" id="ops-sub"></div></div>
-        <div class="row" style="margin:0"><button class="btn ghost small" id="ops-save">💾 Save now</button><button class="btn ghost small" id="ops-export">⬇ Export results JSON</button><button class="btn small" id="ops-round">🏁 End mission → report</button></div></div>
+        <div class="row" style="margin:0"><button class="btn ghost small" id="ops-save">💾 Save now</button><button class="btn ghost small" id="ops-export">⬇ Export results JSON</button><button class="btn ghost small" id="ops-complete" title="Run the simulation to the planned end, then see the report">⏩ Complete mission</button><button class="btn small" id="ops-round">🏁 End mission → report</button></div></div>
       <div class="kpis" id="kpis"></div>
       <div class="charts">
         <div class="panel chart"><div class="ttl"><b>Atmospheric methane</b><span id="c1v"></span></div><div class="leg"><span><i style="background:var(--series-1)"></i>Your world</span><span><i style="background:var(--series-2)"></i>No-action world</span></div><canvas id="c1"></canvas></div>
@@ -37,6 +37,7 @@ const OpsView = (() => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'blue-marble-results.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     };
     $('#ops-round').onclick = () => $('#btn-round').click();
+    $('#ops-complete').onclick = () => $('#btn-complete').click();
   }
 
   function kpi(lbl, val, sub) { return `<div class="panel kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub || ''}</div></div>`; }

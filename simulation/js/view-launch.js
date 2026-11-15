@@ -257,10 +257,16 @@ const LaunchView = (() => {
 
   function endFlight() {
     const S = SIM.state;
+    const deployed = !!(flight && flight.deployed);
     S.flightActive = false;
     flight = null; flightL = null;
     $('#flight').hidden = true; $('#launch-planner').hidden = false;
     renderPlanner();
+    // satellites are in orbit: the world clock runs at the default 10 min/s, so one orbit takes about 10 s
+    if (deployed && !S.ended) {
+      UI.setWarp(600); S.paused = false;
+      UI.toast('The clock is running at 10 min per second: one lap of the Earth takes about 10 s. Press » to speed up or « to slow down.', 'good', 'Satellite in orbit');
+    }
     UI.updateTop(true);
   }
 

@@ -70,7 +70,7 @@ const SIM = (() => {
       log: [], decisions: [], ledger: [], history: [], reports: [], month: newMonth(), money: { spent: 0, earned: 0, by: {} }, mapFrames: { every: 1, n: 0, frames: [] },
       stats: { leaksDetected: 0, leaksFixed: 0, mtAvoided: 0, launches: 0, launchFailures: 0, satsLost: 0, passes: 0, dataMB: 0, grants: 0, missedLeaks: 0, scienceObs: 0 },
       nextMonth: t0 + 30.44 * DAY * 1000, nextRound: t0 + cfg.roundLengthMonths * 30.44 * DAY * 1000, roundStart: t0,
-      warp: 3600, paused: true, ended: false, pending: null, flightActive: false,
+      warp: 600, paused: true, ended: false, pending: null, flightActive: false,
     };
     // seed some active leaks so there is something to find on day one
     SITES.forEach((site, i) => { for (let k = 0; k < Math.round(site.leakRate * 0.35); k++) spawnLeak(i, true); });
@@ -779,7 +779,7 @@ const SIM = (() => {
   }
   function die(sat, why) {
     if (sat.status !== 'active') return;
-    sat.status = 'dead'; sat.endT = S.t; S.stats.satsLost++;
+    sat.status = 'dead'; sat.endT = S.t; sat.endWhy = why; S.stats.satsLost++;
     logEvent('bad', `${sat.name} has failed: ${why}. It is now space debris.`);
     adjustTrust(-1.5);
     S.debris.push({ name: sat.name + ' (dead)', el: sat.el });
@@ -1058,6 +1058,45 @@ const SIM = (() => {
     emit('launches');
   }
 
+  /* ===================== complete mission: run to the planned end on its own ===================== */
+  // A booked launch flown without the flight screen: the autopilot's nominal orbit, with the rocket's real reliability.
+  function autoLaunch(L) {
+    const opt = LAUNCH_OPTIONS.find(o => o.id === L.opt) || {};
+    const rocket = ROCKETS[opt.rocket] || { reliability: 0.95 };
+    const rel = rocket.reliability * (S.cfg.agency === 'startup' ? 0.97 : 1);
+    if (Math.random() > rel) { launchResult(L, { ok: false, reason: 'rocket anomaly during ascent' }); logEvent('bad', `🚀 The launch of ${L.designName} failed: rocket anomaly during ascent.`); return; }
+    const site = LAUNCH_SITES.find(s => s.id === L.site) || { lon: 0 };
+    const alt = (L.target && L.target.alt) || 525, inc = (L.target && L.target.inc) || 97.6;
+    // the orbit plane passes over the launch site at launch time
+    const base = { a: ORB.RE + alt * 1000, e: 0.001, i: inc * ORB.DEG, raan: ORB.wrap(ORB.gmst(S.t) + site.lon * ORB.DEG), argp: 0, M: 0, epoch: S.t };
+    for (let k = 0; k < L.qty; k++) {
+      const name = L.qty > 1 ? `${L.designName}-${String.fromCharCode(65 + k)}` : L.designName;
+      addSatellite(name, L.parts, { ...base, M: L.qty > 1 ? k / L.qty * ORB.TAU : 0 }, { opt: L.opt, date: fmtDate(S.t) });
+    }
+    launchResult(L, { ok: true, apo: alt, peri: alt, inc });
+    logEvent('good', `🚀 Autopilot launch: ${L.qty}× ${L.designName} reached a ${alt} km orbit at ${inc.toFixed(1)}°; the empty stage was deorbited.`);
+  }
+  // the safe default for a decision nobody is there to make
+  function autoChoice(p) {
+    if (p.type === 'budget') return S.science >= 150 ? 'present' : 'accept';
+    if (p.type === 'debris') return 'dodge';
+    return p.options && p.options[0] && p.options[0].id;
+  }
+  // Advance for up to budgetMs of real time; returns true when the mission has ended.
+  function completeStep(budgetMs = 25) {
+    if (!S || S.ended) return true;
+    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const t0 = now();
+    let guard = 0;
+    while (!S.ended && now() - t0 < budgetMs && guard++ < 400) {
+      if (S.pending) resolvePending(autoChoice(S.pending));
+      for (const L of S.launches) if (L.status === 'ready') autoLaunch(L);
+      advance(Math.max(60, Math.min(30.44 * DAY, (S.tEnd - S.t) / 1000 + 60)));
+    }
+    return S.ended;
+  }
+  function progress() { return Math.min(1, Math.max(0, (S.t - S.t0) / (S.tEnd - S.t0))); }
+
   /* ===================== rounds & end ===================== */
   function roundSummary() {
     const h0 = S.history.find(h => h.t >= S.roundStart) || S.history[0];
@@ -1123,6 +1162,7 @@ const SIM = (() => {
         };
       })(),
       trust: +S.trust.toFixed(1), science: S.science,
+      designReview: typeof DESIGN_REVIEW !== 'undefined' ? DESIGN_REVIEW.build(S) : [],
       satellites: sats.map(s => ({ name: s.name, status: s.status, launched: fmtDate(s.launched), designScore: s.comp.score.total, detections: s.stats.detections, dataMB: Math.round(s.stats.downMB), altKm: Math.round((s.el.a - ORB.RE) / 1000), incDeg: +(s.el.i / ORB.DEG).toFixed(1) })),
       history: S.history.filter((_, i) => i % Math.max(1, Math.floor(S.history.length / 240)) === 0),
       decisions: S.decisions,
@@ -1201,7 +1241,7 @@ const SIM = (() => {
   return {
     siteEmission, profile,
     get state() { return S; }, on, emit, newGame, load, save, tick, advance, addSatellite, command, applyDv, bookLaunch, launchResult,
-    launchPrice, nextLaunchDate, resolvePending, endRound, roundSummary, end, results, siteStatus, countryEmission, nextContact,
+    launchPrice, nextLaunchDate, resolvePending, completeStep, progress, endRound, roundSummary, end, results, siteStatus, countryEmission, nextContact,
     capacityWh, usableFloor, dvLeft, storageCap, decision, logEvent, ledger, fmtDate, money, years, YEAR, DAY, MT_PER_TPH,
   };
 })();

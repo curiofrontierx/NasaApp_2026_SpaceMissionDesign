@@ -59,7 +59,7 @@
   delete S.advDone;
   UI.bind();
   GUIDE.init();
-  UI.setWarp(S.warp || 3600);
+  UI.setWarp(S.warp || 600);
 
   let view = 'map';
   try { view = sessionStorage.getItem('mbm.view') || (S.satellites.length ? 'map' : 'launch'); } catch { /* ignore */ }

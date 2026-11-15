@@ -95,22 +95,25 @@ const UI = (() => {
     $('#btn-faster').addEventListener('click', faster);
     $('#btn-slower').addEventListener('click', slower);
     $('#btn-round').addEventListener('click', endButton);
+    $('#btn-complete').addEventListener('click', confirmComplete);
     document.addEventListener('keydown', e => {
       if (e.target.closest('input, textarea, select') || $('#modal').open) return;
       if (SIM.state && SIM.state.flightActive && current === 'launch') return; // flight keys
       if (e.code === 'Space') { e.preventDefault(); togglePause(); }
       else if (e.key === '.' || e.key === '>') faster();
       else if (e.key === ',' || e.key === '<') slower();
-      else if (/^[1-4]$/.test(e.key)) show(['map', 'orbit', 'launch', 'ops'][+e.key - 1]);
+      else if (/^[1-4]$/.test(e.key)) show(['launch', 'ops', 'map', 'orbit'][+e.key - 1]);
     });
     SIM.on('log', e => {
       $('#ticker').textContent = `${e.date} · ${e.msg}`;
+      if (completing) return;
       if (e.kind === 'bad' && /failed|lost|re-entered|bankrupt|browned out in eclipse/i.test(e.msg) && !/browned/.test(e.msg)) toast(e.msg, 'bad');
       if (/Breaking/.test(e.msg)) toast(e.msg, 'warn', 'News');
     });
-    SIM.on('detection', ({ site, leak, sat }) => { if (SIM.state.warp <= 86400) toast(`${sat.name} found a ${leak.rate.toFixed(1)} t/h leak at ${site.name}.`, 'good', 'Leak reported'); });
-    SIM.on('pending', p => { if (p) showPending(p); });
+    SIM.on('detection', ({ site, leak, sat }) => { if (!completing && SIM.state.warp <= 86400) toast(`${sat.name} found a ${leak.rate.toFixed(1)} t/h leak at ${site.name}.`, 'good', 'Leak reported'); });
+    SIM.on('pending', p => { if (p && !completing) showPending(p); });
     SIM.on('launchReady', L => {
+      if (completing) return;
       updateTop(true);
       if (typeof LaunchView !== 'undefined' && LaunchView.autoFly(L)) return;
       const waited = typeof GUIDE !== 'undefined' ? GUIDE.warpSummaryHTML() : '';
@@ -120,7 +123,7 @@ const UI = (() => {
       $('#m-orbit').onclick = () => { closeModal(); LaunchView.flyToOrbit(L); };
       $('#m-go').onclick = () => { closeModal(); show('launch'); setTimeout(() => { const b = document.querySelector(`[data-fly="${L.id}"]`); if (b) b.click(); }, 60); };
     });
-    SIM.on('report', r => { if (SIM.state.warp <= 604800 && r.grade !== 'F') toast(`Grade ${r.grade}: ${r.detections} leaks, ${r.sites} sites in ${r.countries.length} countries${r.grant ? `, ${fmt$(r.grant)} grant` : ''}. Regulators in those countries feel the pressure.`, r.quality >= 0.6 ? 'good' : '', 'Monthly data report'); });
+    SIM.on('report', r => { if (!completing && SIM.state.warp <= 604800 && r.grade !== 'F') toast(`Grade ${r.grade}: ${r.detections} leaks, ${r.sites} sites in ${r.countries.length} countries${r.grant ? `, ${fmt$(r.grant)} grant` : ''}. Regulators in those countries feel the pressure.`, r.quality >= 0.6 ? 'good' : '', 'Monthly data report'); });
     SIM.on('ended', showEnd);
     // a decision that came up before the page was ready (e.g. while fast-forwarding) still needs an answer
     if (SIM.state && SIM.state.pending) setTimeout(() => showPending(SIM.state.pending), 0);
@@ -142,11 +145,64 @@ const UI = (() => {
       ${left > 0.05 ? `<div class="note warn"><b>${left.toFixed(1)} of ${S.cfg.durationYears} years are still left.</b> The review measures what you achieved against the <b>whole</b> ${S.cfg.durationYears}-year mission, so ending early lowers your score${left / S.cfg.durationYears > 0.75 ? ', and ending this soon counts as an abandoned mission' : ''}.</div>` : ''}
       <div class="kv"><span>Leaks reported / fixed</span><b>${S.stats.leaksDetected} / ${S.stats.leaksFixed}</b><span>Satellites active</span><b>${S.satellites.filter(s => s.status === 'active').length}</b>
       <span>Methane vs no-action world</span><b>${(S.climate.ch4 - (S.climate.ch4bau || S.climate.ch4)).toFixed(1)} ppb</b></div>
-      <div class="modal-actions"><button class="btn ghost" id="m-cancel">Keep playing</button><button class="btn" id="m-end">End mission → report</button></div>`);
+      <div class="modal-actions"><button class="btn ghost" id="m-cancel">Keep playing</button>${left > 0.05 ? '<button class="btn ghost" id="m-complete">⏩ Complete mission instead</button>' : ''}<button class="btn" id="m-end">End mission → report</button></div>`);
     $('#m-cancel').onclick = closeModal;
+    if ($('#m-complete')) $('#m-complete').onclick = confirmComplete;
     $('#m-end').onclick = () => { closeModal(); endedByPlayer = true; SIM.end('ended'); };
   }
   let endedByPlayer = false;
+
+  /* ---------- complete mission: the simulation runs on its own to the planned end ---------- */
+  let completing = false;
+  function confirmComplete() {
+    const S = SIM.state; if (!S || S.ended || completing) return;
+    if (S.flightActive) { toast('Finish or leave the launch first.', 'warn'); return; }
+    S.paused = true; updateTop(true);
+    const left = Math.max(0, (S.tEnd - S.t) / (365.25 * 86400000));
+    const booked = S.launches.filter(l => l.status === 'scheduled' || l.status === 'ready').length;
+    const active = S.satellites.filter(s => s.status === 'active').length;
+    modal(`<h2>⏩ Complete the mission?</h2>
+      <p>The simulation runs on its own through the remaining <b>${left.toFixed(1)} years</b> to ${SIM.fmtDate(S.tEnd)}, then the final mission report opens on the Feedback page.</p>
+      <ul style="padding-left:18px;line-height:1.7;margin:8px 0">
+        <li>Your <b>${active}</b> active satellite${active === 1 ? '' : 's'} keep${active === 1 ? 's' : ''} working on autopilot: finding leaks, downlinking data and keeping their orbits.</li>
+        <li>${booked ? `<b>${booked}</b> booked launch${booked === 1 ? '' : 'es'} fl${booked === 1 ? 'ies' : 'y'} with the autopilot (rockets can still fail).` : 'No launches are booked, so no new satellites will join.'}</li>
+        <li>Events still happen; decisions take the safe choice (dodge debris, defend the budget when you have the Science Points).</li>
+      </ul>
+      ${active + booked === 0 ? '<div class="note warn"><b>You have no satellites.</b> Nothing will find leaks, so the review will be poor. Book a launch first if you want a better result.</div>' : ''}
+      <div class="modal-actions"><button class="btn ghost" id="m-cancel">Keep playing</button><button class="btn" id="m-go">⏩ Complete mission</button></div>`);
+    $('#m-cancel').onclick = closeModal;
+    $('#m-go').onclick = runComplete;
+  }
+  function runComplete() {
+    const S = SIM.state;
+    if (typeof GUIDE !== 'undefined' && GUIDE.warping) GUIDE.stopWarp(true);
+    completing = true; endedByPlayer = true;
+    modal(`<h2>⏩ Completing the mission…</h2>
+      <p id="mc-date" class="mono">${SIM.fmtDate(S.t)}</p>
+      <div style="height:10px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:10px 0"><div id="mc-bar" style="height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .15s"></div></div>
+      <p class="fine" id="mc-stats"></p>
+      <div class="modal-actions"><button class="btn ghost" id="mc-stop">Stop and keep playing</button></div>`, { onClose: () => { if (completing) stopComplete(); } });
+    $('#mc-stop').onclick = () => { stopComplete(); closeModal(); };
+    const step = () => {
+      if (!completing) return;
+      const done = SIM.completeStep(30);
+      const s = SIM.state;
+      const bar = $('#mc-bar'); if (bar) bar.style.width = (SIM.progress() * 100).toFixed(1) + '%';
+      const d = $('#mc-date'); if (d) d.textContent = `${SIM.fmtDate(s.t)} · year ${Math.min(s.cfg.durationYears, Math.floor(SIM.years()) + 1)} of ${s.cfg.durationYears}`;
+      const st = $('#mc-stats'); if (st) st.textContent = `${s.stats.leaksDetected} leaks reported · ${s.stats.leaksFixed} fixed · ${s.satellites.filter(x => x.status === 'active').length} satellites active · ${s.climate.ch4.toFixed(0)} ppb CH₄`;
+      updateTop(true);
+      if (done) { completing = false; return; } // the 'ended' event opens the report
+      setTimeout(step, 0);
+    };
+    setTimeout(step, 30);
+  }
+  function stopComplete() {
+    if (!completing) return;
+    completing = false; endedByPlayer = false;
+    const S = SIM.state; if (S) S.paused = true;
+    updateTop(true);
+    toast('Stopped. The clock is paused; press ▶ to keep playing.', '', 'Complete mission');
+  }
   const REPORT_URL = () => PAGES.results + (PAGES.results.includes('?') ? '&' : '?') + 'from=simulation';
 
   function showEnd(r) {
@@ -160,7 +216,7 @@ const UI = (() => {
       <div class="modal-actions"><button class="btn ghost" id="m-stay">Stay and look around</button><button class="btn" id="m-results">See the mission report →</button></div>`);
     let n = 8;
     const timer = setInterval(() => { n--; const el = $('#m-count'); if (el) el.textContent = `Opening the mission report in ${n} s…`; if (n <= 0) { clearInterval(timer); location.href = REPORT_URL(); } }, 1000);
-    $('#m-stay').onclick = () => { clearInterval(timer); closeModal(); UI.toast('The mission is over. Use “Mission report” in the top bar when you are ready.', '', 'Mission over'); $('#btn-round').textContent = '📄 Mission report'; };
+    $('#m-stay').onclick = () => { clearInterval(timer); closeModal(); UI.toast('The mission is over. Use “Mission report” in the top bar when you are ready.', '', 'Mission over'); $('#btn-round').textContent = '📄 Mission report'; $('#btn-complete').hidden = true; };
     $('#m-results').onclick = () => { clearInterval(timer); location.href = REPORT_URL(); };
   }
   function endButton() { if (SIM.state && SIM.state.ended) location.href = REPORT_URL(); else confirmEndMission(); }

@@ -46,10 +46,37 @@ const MapView = (() => {
       <div class="ends"><span>${s.fmt(s.min)}${choro === 'trend' ? ' falling' : ''}</span><span>${s.fmt(mid)}</span><span>${s.fmt(s.max)}${choro === 'trend' ? ' rising' : '+'}</span></div>`;
   }
 
+  // show the whole world in the space the side panels leave free
+  function wholeWorld(animate = true) {
+    const size = map.getSize(); if (!size.x || !size.y) return;
+    const view = $('#view-map');
+    const hidden = view.classList.contains('panels-hidden');
+    const left = hidden ? 0 : ($('#map-controls').offsetWidth || 0) + 20;
+    const right = hidden ? 0 : ($('#map-info').offsetWidth || 0) + 20;
+    map.fitBounds([[-60, -170], [80, 180]], { paddingTopLeft: [left, 10], paddingBottomRight: [right, 10], animate });
+  }
+  function togglePanels() {
+    const view = $('#view-map');
+    view.classList.toggle('panels-hidden');
+    const btn = $('#map-panels-btn'); if (btn) btn.textContent = view.classList.contains('panels-hidden') ? '⇔ Show panels' : '⇔ Hide panels';
+    wholeWorld();
+  }
+
   /* ---------- init ---------- */
   async function init() {
-    map = L.map('map', { worldCopyJump: true, minZoom: 2, zoomControl: false, preferCanvas: false }).setView([25, 20], 2);
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // one world (no blank or half-drawn copies): zoom out until all of it fits, panning stops at its edges
+    map = L.map('map', { zoomSnap: 0.25, zoomDelta: 0.5, minZoom: 0.5, maxZoom: 9, maxBounds: [[-85.05, -180], [85.05, 180]], maxBoundsViscosity: 1, worldCopyJump: false, zoomControl: false, preferCanvas: false });
+    wholeWorld(false);
+    // one toolbar at the top centre of the map: zoom, whole world, hide / show the side panels
+    const bar = document.createElement('div');
+    bar.className = 'map-btns';
+    bar.innerHTML = '<button class="btn small ghost" id="map-zoom-out" title="Zoom out">−</button><button class="btn small ghost" id="map-zoom-in" title="Zoom in">+</button><button class="btn small" id="map-world-btn" title="Zoom out to the whole world">🌍 Whole world</button><button class="btn small ghost" id="map-panels-btn" title="Hide the side panels to see more of the map">⇔ Hide panels</button>';
+    $('#view-map .map-wrap').appendChild(bar);
+    L.DomEvent.disableClickPropagation(bar); L.DomEvent.disableScrollPropagation(bar);
+    bar.querySelector('#map-zoom-out').onclick = () => map.zoomOut();
+    bar.querySelector('#map-zoom-in').onclick = () => map.zoomIn();
+    bar.querySelector('#map-world-btn').onclick = () => wholeWorld();
+    bar.querySelector('#map-panels-btn').onclick = togglePanels;
     map.createPane('countries').style.zIndex = 350;
     map.createPane('night').style.zIndex = 360;
     map.createPane('tracks').style.zIndex = 420;
@@ -157,8 +184,8 @@ const MapView = (() => {
     return `<div class="title">Source of the methane</div>${Object.entries(SITE_TYPES).map(([k, t]) => `<div><span class="dot" style="background:${t.color}"></span>${t.label}</div>`).join('')}
       <div style="margin-top:4px">Size = active leak flow.</div>${ring}`;
   }
+  const siteMarkers = [];
   function drawSites() {
-    siteLayer.clearLayers();
     SITES.forEach((site, i) => {
       const st = SIM.siteStatus(i);
       const type = SITE_TYPES[site.type];
@@ -168,10 +195,18 @@ const MapView = (() => {
       const r = siteMode === 'amount' ? 4 + Math.log10(em.total + 1) * 4 : 4 + Math.sqrt(rate + 0.5) * 1.6;
       const ring = undetected.some(l => l.rate > 20) ? '#ff5d6c' : st.reported.length ? '#4cc3ff' : st.fixed.length && !undetected.length ? '#3ddc84' : '#ffffff';
       const fill = siteMode === 'amount' ? rampColor('site', em.total) : type.color;
-      const m = L.circleMarker([site.lat, site.lon], { radius: r, color: ring, weight: 2, fillColor: fill, fillOpacity: siteMode === 'amount' ? 0.85 : 0.75 });
-      m.bindTooltip(`<b>${esc(site.name)}</b><br>${type.label}<br>≈ ${em.total.toFixed(0)} t/h total (${(em.total * 8.766e-3).toFixed(2)} Mt/yr)<br>${rate.toFixed(1)} t/h from active leaks`);
-      m.on('click', () => { selected = { kind: 'site', i }; renderDetail(); });
-      m.addTo(siteLayer);
+      const style = { color: ring, weight: 2, fillColor: fill, fillOpacity: siteMode === 'amount' ? 0.85 : 0.75 };
+      const tip = `<b>${esc(site.name)}</b><br>${type.label}<br>≈ ${em.total.toFixed(0)} t/h total (${(em.total * 8.766e-3).toFixed(2)} Mt/yr)<br>${rate.toFixed(1)} t/h from active leaks`;
+      let m = siteMarkers[i];
+      if (!m) {
+        m = siteMarkers[i] = L.circleMarker([site.lat, site.lon], { radius: r, ...style }).bindTooltip(tip);
+        m.on('click', () => { selected = { kind: 'site', i }; renderDetail(); });
+        m.addTo(siteLayer);
+      } else {
+        if (Math.abs(m.getRadius() - r) > 0.05) m.setRadius(r);
+        const o = m.options; if (o.color !== style.color || o.fillColor !== style.fillColor || o.fillOpacity !== style.fillOpacity) m.setStyle(style);
+        if (m.getTooltip().getContent() !== tip) m.setTooltipContent(tip);
+      }
     });
   }
 
@@ -208,20 +243,29 @@ const MapView = (() => {
     });
     lastTracks = performance.now();
   }
+  const satMarkers = new Map();
   function drawSats() {
     const S = SIM.state;
-    satLayer.clearLayers();
+    const live = new Set();
     S.satellites.filter(s => s.status === 'active').forEach(sat => {
       const st = ORB.stateAt(sat.el, S.t);
-      L.marker([st.lat, st.lon], { icon: L.divIcon({ className: 'sat-icon', html: '🛰️', iconSize: [20, 20] }) })
-        .bindTooltip(`<b>${esc(sat.name)}</b><br>${(st.alt / 1000).toFixed(0)} km · ${sat.safeMode ? 'safe mode' : 'operating'}`)
-        .on('click', () => { UI.show('orbit'); OrbitView.select(sat.id); })
-        .addTo(satLayer);
+      live.add(sat.id);
+      const tip = `<b>${esc(sat.name)}</b><br>${(st.alt / 1000).toFixed(0)} km · ${sat.safeMode ? 'safe mode' : 'operating'}`;
+      let m = satMarkers.get(sat.id);
+      if (!m) {
+        m = L.marker([st.lat, st.lon], { icon: L.divIcon({ className: 'sat-icon', html: '🛰️', iconSize: [20, 20] }) })
+          .bindTooltip(tip).on('click', () => { UI.show('orbit'); OrbitView.select(sat.id); }).addTo(satLayer);
+        satMarkers.set(sat.id, m);
+      } else {
+        m.setLatLng([st.lat, st.lon]);
+        if (m.getTooltip().getContent() !== tip) m.setTooltipContent(tip);
+      }
     });
+    for (const [id, m] of satMarkers) if (!live.has(id)) { satLayer.removeLayer(m); satMarkers.delete(id); }
     lastSats = performance.now();
   }
+  let nightPoly = null;
   function drawNight() {
-    nightLayer.clearLayers();
     const t = SIM.state.t;
     const s = ORB.eciToEcef(ORB.sunDir(t), ORB.gmst(t));
     const sunLat = Math.asin(s[2]) / ORB.DEG, sunLon = Math.atan2(s[1], s[0]) / ORB.DEG;
@@ -234,21 +278,24 @@ const MapView = (() => {
     }
     const pole = dec > 0 ? -85.05 : 85.05; // Web Mercator cannot draw the poles themselves
     const poly = [[pole, -180], ...pts, [pole, 180]];
-    L.polygon(poly, { pane: 'night', stroke: false, fillColor: '#000814', fillOpacity: 0.42, interactive: false }).addTo(nightLayer);
+    if (!nightPoly) nightPoly = L.polygon(poly, { pane: 'night', stroke: false, fillColor: '#000814', fillOpacity: 0.42, interactive: false }).addTo(nightLayer);
+    else nightPoly.setLatLngs(poly);
   }
 
   /* ---------- side panels ---------- */
+  function setHTML(el, html) { if (el._html !== html) { el.innerHTML = html; el._html = html; return true; } return false; }
   function renderDetail() {
     const S = SIM.state;
     const box = $('#map-detail');
+    let html = '';
     if (!selected) {
-      box.innerHTML = `<h3>Select a country or site</h3><p class="fine" style="margin-top:0">Click a country to see its emissions trend and how its regulators respond to your data, or a circle to see the leaks your satellites have found there.</p>
+      html = `<h3>Select a country or site</h3><p class="fine" style="margin-top:0">Click a country to see its emissions trend and how its regulators respond to your data, or a circle to see the leaks your satellites have found there.</p>
         <p class="fine">Every leak you report and every monthly data report builds evidence. Countries with fast-acting regulators cut emissions within a few years; opaque producers barely move; places your satellites never see keep growing.</p>`;
     } else if (selected.kind === 'country') {
       const f = selected.f;
       const e = SIM.countryEmission(String(+f.id));
       const sites = SITES.map((s, i) => [s, i]).filter(([s]) => String(s.iso) === String(+f.id));
-      box.innerHTML = `<div class="panel-head"><h3>${esc(f.properties.name)}</h3><button class="icon-btn" id="md-close" aria-label="Close">✕</button></div>
+      html = `<div class="panel-head"><h3>${esc(f.properties.name)}</h3><button class="icon-btn" id="md-close" aria-label="Close">✕</button></div>
         ${e ? countryHTML(e, f) : ''}${e ? '' : `
 <p class="muted">Small emitter, not tracked individually.</p><div class="kv"><span>Local warming</span><b>+${localWarming(f.properties._lat).toFixed(2)}°C</b></div>`}
         ${sites.length ? `<h3>Monitored sites</h3><ul class="leak-list">${sites.map(([s, i]) => `<li><a href="#" data-site="${i}">${esc(s.name)}</a><span class="mono">${SIM.siteStatus(i).rate.toFixed(1)} t/h</span></li>`).join('')}</ul>` : ''}`;
@@ -256,7 +303,7 @@ const MapView = (() => {
       const i = selected.i, site = SITES[i], st = SIM.siteStatus(i), type = SITE_TYPES[site.type];
       const known = [...st.active.filter(l => l.status === 'detected'), ...st.reported];
       const hidden = st.active.filter(l => l.status === 'active');
-      box.innerHTML = `<div class="panel-head"><h3>${esc(site.name)}</h3><button class="icon-btn" id="md-close" aria-label="Close">✕</button></div>
+      html = `<div class="panel-head"><h3>${esc(site.name)}</h3><button class="icon-btn" id="md-close" aria-label="Close">✕</button></div>
         <div><span class="dot" style="background:${type.color}"></span>${type.label} · ${site.lat.toFixed(1)}°, ${site.lon.toFixed(1)}°</div>
         <div class="kv" style="margin-top:8px"><span>Leak flow now</span><b>${st.rate.toFixed(1)} t/h</b><span>Unreported leaks</span><b>${hidden.length}</b>
         <span>Reported / awaiting repair</span><b>${known.length}</b><span>Repaired</span><b>${st.fixed.length}</b><span>Satellite looks</span><b>${st.observations}</b>
@@ -264,6 +311,7 @@ const MapView = (() => {
         ${hidden.length ? `<p class="note warn">${hidden.length} leak${hidden.length > 1 ? 's are' : ' is'} still unreported here. Their exact size is unknown until a satellite with the right instrument sees ${hidden.length > 1 ? 'them' : 'it'}.${site.cloud > 0.6 ? ' Frequent clouds: day-only SWIR instruments will struggle, LIDAR or LWIR can see through more often.' : ''}${Math.abs(site.lat) > 60 ? ' High latitude: needs a polar or Sun-synchronous orbit.' : ''}</p>` : ''}
         ${known.length || st.fixed.length ? `<ul class="leak-list">${[...known, ...st.fixed].slice(0, 12).map(l => `<li><span>${l.rate.toFixed(1)} t/h ${l.attributed ? '· facility-level' : ''}</span><span class="status-pill st-${l.status}">${l.status === 'detected' ? 'on board, not downlinked' : l.status}</span></li>`).join('')}</ul>` : ''}`;
     }
+    setHTML(box, html);
     const c = $('#md-close'); if (c) c.onclick = () => { selected = null; recolor(); renderDetail(); };
     $$('#map-detail [data-site]').forEach(a => a.onclick = e => { e.preventDefault(); selected = { kind: 'site', i: +a.dataset.site }; renderDetail(); const s = SITES[+a.dataset.site]; map.flyTo([s.lat, s.lon], 5); });
     renderGlobal();
@@ -298,7 +346,7 @@ const MapView = (() => {
     let falling = 0, rising = 0;
     Object.keys(S.countries).forEach(iso => { const e = SIM.countryEmission(iso); if (e.trend < -0.01) falling++; else if (e.trend > 0.01) rising++; });
     const rep = S.reports && S.reports[S.reports.length - 1];
-    $('#map-global').innerHTML = `<h3>Global methane</h3>
+    setHTML($('#map-global'), `<h3>Global methane</h3>
       <div class="big-num">${c.ch4.toFixed(1)} <small class="muted" style="font-size:13px">ppb</small></div>
       <div class="fine" style="margin-top:2px">No-action world: <b class="mono">${(c.ch4bau || c.ch4).toFixed(1)} ppb</b> · you: <b class="mono ${diff >= 0 ? 'delta-good' : 'delta-bad'}">${diff >= 0 ? '−' : '+'}${Math.abs(diff).toFixed(1)} ppb</b></div>
       <div class="kv" style="margin-top:10px"><span>Total emissions</span><b>${c.total.toFixed(0)} Mt/yr</b><span>Human-caused</span><b>${c.anthro.toFixed(0)} Mt/yr</b>
@@ -306,7 +354,7 @@ const MapView = (() => {
       <span>Warming</span><b>+${c.dT.toFixed(2)}°C</b><span>Warming avoided</span><b>${((c.avoidedC || 0) * 1000).toFixed(1)} m°C</b>
       <span>Leaks unreported / reported</span><b>${unreported} / ${reported}</b><span>Repaired so far</span><b>${S.stats.leaksFixed}</b>
       <span>Countries cutting / rising</span><b>${falling} / ${rising}</b></div>
-      ${rep ? `<div class="fine" style="margin-top:8px">Latest data report (${rep.month}): <b class="mono">grade ${rep.grade}</b> · ${rep.detections} leaks · ${rep.sites} sites · ${rep.grant ? fmt$(rep.grant) + ' grant' : 'no grant'}</div>` : '<div class="fine" style="margin-top:8px">No data reports yet: launch a satellite.</div>'}`;
+      ${rep ? `<div class="fine" style="margin-top:8px">Latest data report (${rep.month}): <b class="mono">grade ${rep.grade}</b> · ${rep.detections} leaks · ${rep.sites} sites · ${rep.grant ? fmt$(rep.grant) + ' grant' : 'no grant'}</div>` : '<div class="fine" style="margin-top:8px">No data reports yet: launch a satellite.</div>'}`);
   }
 
   /* ---------- frame ---------- */
@@ -319,9 +367,10 @@ const MapView = (() => {
     if (now - lastChoro > 2500) { recolor(); drawSites(); if (!selected || selected.kind !== 'country') renderDetail(); else renderGlobal(); }
   }
 
+  let shownOnce = false;
   function show() {
     if (!map) init();
-    setTimeout(() => { map.invalidateSize(); lastTracks = 0; lastSats = 0; frame(); }, 30);
+    setTimeout(() => { map.invalidateSize(); if (!shownOnce) { shownOnce = true; wholeWorld(false); } lastTracks = 0; lastSats = 0; frame(); }, 30);
   }
   function focusSite(id) { const i = SITES.findIndex(s => s.id === id); if (i < 0) return; selected = { kind: 'site', i }; UI.show('map'); setTimeout(() => { map.flyTo([SITES[i].lat, SITES[i].lon], 5); renderDetail(); }, 60); }
 

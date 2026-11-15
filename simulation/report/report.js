@@ -208,6 +208,16 @@
 
   /* ---------- maps: start vs end, and the timelapse ---------- */
   const MF = R.mapFrames;
+  // ---- satellite design review: what went wrong and which parts would help ----
+  if (R.designReview && R.designReview.length) {
+    const icon = { bad: '❌', warn: '⚠️', good: '✅' };
+    const verdict = { good: 'Worked well', mixed: 'Mostly worked', poor: 'Held the mission back', untested: 'Never flew' };
+    root.append(el('div', 'bmr-panel', '<h2>Satellite design review</h2><p class="bmr-sub">What went wrong with each design in orbit, and which part changes on the Mission Design page would improve the next mission.</p>' +
+      R.designReview.map(d => '<div class="bmr-dr"><h3>' + esc(d.name) + ' <span class="bmr-dr-v bmr-dr-' + d.verdict + '">' + verdict[d.verdict] + '</span></h3>' +
+        '<p class="bmr-sub">' + d.parts.map(p => esc(p.name)).join(' · ') + '<br>Design score ' + d.score + '/100 · ' + d.mass + ' kg · $' + Math.round(d.cost).toLocaleString('en-US') + ' each · ' + d.flown + ' flown · ' + d.detections + ' leaks reported</p>' +
+        '<ul class="bmr-dr-list">' + d.findings.map(f => '<li class="bmr-dr-' + f.level + '"><span>' + icon[f.level] + '</span><div><b>' + esc(f.area) + ':</b> ' + f.what + (f.fix ? '<div class="bmr-dr-fix">💡 ' + f.fix + '</div>' : '') + '</div></li>').join('') + '</ul></div>').join('')));
+  }
+
   const maps = el('div', 'bmr-panel', `<h2>The methane map: before and after</h2>
     <p class="bmr-sub">The same map as the Methane Emissions tab: country colours and site circles come from the game, on NASA Blue Marble imagery (GIBS).</p>
     <div class="bmr-controls">

@@ -19,11 +19,11 @@
   <div class="tb-row">
     <a class="brand" href="index.html" title="Mission: Blue Marble start page (the game is saved)">🌍 <span>Blue Marble</span></a>
     <nav class="tabs" role="tablist" aria-label="Game views">
-      <button role="tab" data-view="map" class="on">🌡️ <span>Methane Emissions</span></button>
-      <button role="tab" data-view="orbit">🛰️ <span>Orbit Viewer</span></button>
-      <a class="tab-link" href="design.html" title="Build your satellite on the Design Configuration page (the game is saved)">🔧 <span>Satellite Builder</span></a>
+      <a class="tab-link" href="design.html" title="Design your satellite and mission (the game is saved)">🔧 <span>Mission Design</span></a>
       <button role="tab" data-view="launch">🚀 <span>Launch</span><i class="badge-dot" id="launch-dot" hidden></i></button>
       <button role="tab" data-view="ops">📊 <span>Mission Control</span></button>
+      <button role="tab" data-view="map" class="on">🌡️ <span>Methane Emissions</span></button>
+      <button role="tab" data-view="orbit">🛰️ <span>Orbit Viewer</span></button>
     </nav>
     <div class="clock">
       <div class="clock-date mono" id="clock-date">2027-01-01</div>
@@ -46,6 +46,7 @@
     <div class="stat" title="Atmospheric methane (global mean)"><span>CH₄</span><b class="mono" id="st-ch4">0 ppb</b></div>
     <div class="stat" title="Satellites in orbit"><span>🛰️</span><b class="mono" id="st-sats">0</b></div>
     <div class="stat wide" title="Latest event" id="st-ticker"><span>📰</span><em id="ticker">Welcome, Director.</em></div>
+    <button class="btn small ghost" id="btn-complete" title="Run the simulation to the planned end of the mission, then see the final report">⏩ Complete mission</button>
     <button class="btn small ghost" id="btn-round" title="End the mission and see the final report on the Feedback page">🏁 End mission</button>
   </div>
 </header>
@@ -144,6 +145,7 @@
 <script src="simulation/js/nasa/gibs.js"></script>
 <script src="simulation/js/nasa/image-library.js"></script>
 <script src="simulation/js/design-input.js"></script>
+<script src="simulation/js/design-review.js"></script>
 <script src="simulation/js/map-common.js"></script>
 <script src="simulation/js/view-map.js"></script>
 <script src="simulation/js/view-orbit.js"></script>
