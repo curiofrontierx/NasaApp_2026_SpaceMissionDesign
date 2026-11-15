@@ -219,7 +219,7 @@ details summary::-webkit-details-marker{display:none}
   <header class="top">
     <div>
       <div class="tag">NASA Space Apps 2026 · Space Mission Design Game · Climate edition</div>
-      <h1>Methane Watch Tycoon</h1>
+      <h1>CurioFrontierX</h1>
     </div>
     <div class="hud" id="hud"></div>
   </header>
@@ -612,7 +612,7 @@ function riskList(c,live){
 // ===================== RENDER =====================
 function hud(){
  $('hud').innerHTML=`<div>Treasury<b>${money(A.funds)}</b></div><div>Reputation<b>★ ${A.rep}</b></div>
-  <div class="c">CO₂e avoided<b>${fmt(A.mt,1)} Mt</b></div><div class="c">Super-emitters found<b>${fmt(A.emitters)}</b></div>${S.creative?'<div style="border-color:var(--ch4)"><span style="color:var(--ch4)">Mode</span><b style="color:var(--ch4)">🎨 Creative</b></div>':''}<button class="resetbtn" onclick="openReset()">↺ Reset</button>`;
+  <div class="c">Methane detected<b>${fmt(A.mt,1)} Mt</b></div>${S.creative?'<div style="border-color:var(--ch4)"><span style="color:var(--ch4)">Mode</span><b style="color:var(--ch4)">🎨 Creative</b></div>':''}<button class="resetbtn" onclick="openReset()">↺ Reset</button>`;
 }
 function render(){
  $('steps').style.display=S.step===0?'none':'flex'; $('steps').innerHTML=STEPS.map((s,i)=>`<span class="${i===S.step?'on':i<S.step?'done':''}"><i>${i<S.step?'✓':i+1}</i>${s}</span>`).join('');
@@ -1092,7 +1092,7 @@ function rReport(){
  <div class="tiles">
   <div class="tile"><div class="label">Science</div><div class="tv" style="color:var(--accent)">${fmt(res.sci)}<small>/${sc.target}</small></div><div class="pill">${fmt(res.sci/sc.target*100)}% of the goal</div></div>
   <div class="tile"><div class="label">${sc.impact}</div><div class="tv" style="color:var(--ch4)">${fmt(P.emitters)}</div><div class="pill">${REGION[sc.id]?`out of ${fmt(regionPlumes(sc.id).length)} real EMIT plumes here`:'measured from orbit'}</div></div>
-  <div class="tile"><div class="label">CO₂e avoided</div><div class="tv" style="color:var(--ok)">${fmt(P.mt,2)}<small> Mt</small></div><div class="pill">≈ ${fmt(P.mt*1e6/4.6)} cars off the road for a year</div></div>
+  <div class="tile"><div class="label">Methane detected</div><div class="tv" style="color:var(--ok)">${fmt(P.mt,2)}<small> Mt</small></div><div class="pill">measured over this mission</div></div>
   <div class="tile"><div class="label">${S.creative?'Budget':'Net money'}</div><div class="tv" style="color:${S.creative?'var(--ch4)':net>=0?'var(--ok)':'var(--bad)'}">${S.creative?'∞':(net>=0?'+':'')+money(net)}</div><div class="pill">${S.creative?'Creative mode: no money changes':`grant ${money(P.grant)} − cost ${money(P.cost)}`}</div></div>
  </div>
  <div class="res-grid">
@@ -1119,7 +1119,7 @@ function rReport(){
   <div class="colp"><h3>What to improve</h3>${lessons.map(l=>`<div class="why-box">${l}</div>`).join('')}</div>
  </div>
  <div class="colp" style="margin-top:12px"><div class="sec" style="margin-top:0"><h3>🛰 Plumes you measured</h3><small>Real NASA EMIT detections in your target area</small></div>${plumeMap(sc.id,{zoom:true,gid:'rmap',hidden:true,r:REGION[sc.id]?2.2:1.4})}</div>
- <div class="nav"><button class="btn ghost" onclick="redesign()">✏️ Redesign this mission</button><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" onclick="flyAgain()">🔁 Fly the same design again</button><button class="btn" onclick="toHQ()">Back to HQ →</button></span></div>`;
+ <div class="nav"><button class="btn ghost" onclick="redesign()">✏️ Redesign this mission</button><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" onclick="flyAgain()">🔁 Fly the same design again</button><a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="index.html">🏠 Home</a><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="design.html">🔁 Replay</a></span></div>`;
  // animations: score count-up, ring, plume reveal
  const target=s.total, t0=performance.now(), el=$('scoreNum');
  const step=t=>{const k=Math.min(1,(t-t0)/1200), v=Math.round(target*(1-Math.pow(1-k,3))); if(el) el.textContent=v; if(k<1) requestAnimationFrame(step);}; requestAnimationFrame(step);
