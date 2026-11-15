@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design Configuration | CurioFrontierX</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="design.html" class="active">Design Configuration</a>
+    <a href="nasa-data.html">NASA Data Configuration</a>
+  </nav>
+  <main>
+    <p class="label">Mission Control</p>
+    <h1>Design Configuration</h1>
+    <p>Engineer your methane-monitoring satellite within budget and launch mass limits. Choices are saved in your browser.</p>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Hardware</h2>
+        <label for="missionName">Mission name</label>
+        <input id="missionName" maxlength="40">
+        <label for="battery">Battery</label>
+        <select id="battery"></select>
+        <label for="thruster">Thruster</label>
+        <select id="thruster"></select>
+        <label for="storage">Data storage</label>
+        <select id="storage"></select>
+        <label for="transmitter">Transmitter</label>
+        <select id="transmitter"></select>
+        <label for="detector">Methane detector</label>
+        <select id="detector"></select>
+      </section>
+
+      <section class="panel">
+        <h2>Budget</h2>
+        <div class="stat"><span>Spent</span><span id="costText"></span></div>
+        <div class="bar"><div id="costBar"></div></div>
+        <div class="stat"><span>Remaining</span><span id="remainingText"></span></div>
+
+        <h2>Selected Parts</h2>
+        <div id="parts"></div>
+
+        <button id="simulateBtn">🚀 Simulate</button>
+        <button id="saveBtn" class="secondary">Save design</button>
+        <button id="resetBtn" class="secondary">Reset to defaults</button>
+        <button id="exportBtn" class="secondary">Export JSON</button>
+        <label for="importFile">Import JSON</label>
+        <input type="file" id="importFile" accept="application/json">
+        <p class="toast" id="toast"></p>
+      </section>
+    </div>
+
+    <footer>An independent team project. This is not an official NASA website.</footer>
+  </main>
+  <script src="assets/parts.js"></script>
+  <script src="assets/design.js"></script>
+</body>
+</html>

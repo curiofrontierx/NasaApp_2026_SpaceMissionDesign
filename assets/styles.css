@@ -1,0 +1,25 @@
+body { margin: 0; background: #091121; color: #edf4ff; font-family: system-ui, sans-serif; line-height: 1.6; }
+main { max-width: 1000px; margin: auto; padding: 40px 24px; }
+nav { display: flex; gap: 18px; padding: 14px 24px; background: #0d1a2f; border-bottom: 1px solid #304461; }
+nav a { color: #9cdcff; text-decoration: none; }
+nav a.active { color: #8de0d2; font-weight: bold; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 4px; }
+p, .muted { color: #bac9df; }
+.label { color: #8de0d2; letter-spacing: .1em; text-transform: uppercase; margin: 0; }
+.panel { margin-top: 24px; padding: 22px; background: #13213a; border: 1px solid #304461; border-radius: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+label { display: block; margin-top: 12px; font-weight: 600; }
+select, input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px; background: #091121; color: #edf4ff; border: 1px solid #304461; border-radius: 8px; }
+input[type=checkbox] { width: auto; }
+button { margin: 12px 10px 0 0; padding: 10px 18px; background: #9cdcff; color: #091121; border: 0; border-radius: 8px; font-weight: bold; cursor: pointer; }
+button.secondary { background: #304461; color: #edf4ff; }
+.stat { display: flex; justify-content: space-between; border-bottom: 1px dashed #304461; padding: 6px 0; }
+.ok { color: #7ee0a1; } .bad { color: #ff8a8a; } .warn { color: #ffd27a; }
+.bar { height: 10px; background: #091121; border-radius: 6px; overflow: hidden; margin: 4px 0 10px; }
+.bar > div { height: 100%; background: #8de0d2; transition: width .2s; }
+.part { padding: 8px 0; border-bottom: 1px dashed #304461; }
+.part-head { display: flex; justify-content: space-between; font-weight: 600; }
+.part p { margin: 2px 0 0; font-size: .9rem; }
+.toast { min-height: 1.4em; color: #8de0d2; }
+.map { width: 100%; border-radius: 10px; border: 1px solid #304461; background: #000; min-height: 200px; display: block; }
+footer { margin-top: 40px; color: #92a4bd; font-size: .85rem; }
