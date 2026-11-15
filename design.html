@@ -3,16 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Design Configuration | CurioFrontierX</title>
+  <title>Satellite Builder | Blue Marble</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body>
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="design.html" class="active">Design Configuration</a>
-    <a href="nasa-data.html">Explore NASA Data</a>
-    <a href="methane.html">Methane Hotspots</a>
-  </nav>
+<body class="game-theme">
+  <!-- Same top bar as simulation.html. Tabs open the simulation on that view (simulation.html?view=...). -->
+  <header class="topbar">
+    <a class="brand" href="index.html" title="Mission: Blue Marble start page">🌍 <span>Blue Marble</span></a>
+    <nav class="tabs" aria-label="Game views">
+      <a class="tab-link" href="simulation.html?view=map">🌡️ <span>Methane Emissions</span></a>
+      <a class="tab-link" href="simulation.html?view=orbit">🛰️ <span>Orbit Viewer</span></a>
+      <a class="tab-link on" href="design.html" aria-current="page">🔧 <span>Satellite Builder</span></a>
+      <a class="tab-link" href="simulation.html?view=launch">🚀 <span>Launch</span></a>
+      <a class="tab-link" href="simulation.html?view=ops">📊 <span>Mission Control</span></a>
+    </nav>
+  </header>
   <main>
     <p class="label">Mission Control</p>
     <h1>Design Configuration</h1>
@@ -84,9 +92,12 @@
           <p id="wImgNote" class="muted"></p>
         </div>
       </div>
-      <button id="simulateBtn">🚀 Simulate</button>
-      <p class="toast" id="toast"></p>
     </section>
+
+    <div class="launch-bar">
+      <button id="simulateBtn" class="big-btn">🚀 Simulate Mission</button>
+      <p class="toast" id="toast"></p>
+    </div>
 
     <footer>An independent team project. This is not an official NASA website.</footer>
   </main>

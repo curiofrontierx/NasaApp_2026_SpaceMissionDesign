@@ -27,5 +27,40 @@ button:disabled { opacity: .5; cursor: default; }
 .rating .bar { height: 14px; margin: 6px 0; }
 .rating.overall { font-weight: bold; border-top: 1px dashed #304461; margin-top: 6px; padding-top: 6px; }
 .toast { min-height: 1.4em; color: #8de0d2; }
+/* Main call to action: sticks to the bottom of the screen so it's always visible. */
+.launch-bar { position: sticky; bottom: 0; z-index: 10; margin-top: 24px; padding: 14px 0; text-align: center;
+  background: linear-gradient(to top, #091121 70%, rgba(9, 17, 33, 0)); }
+.launch-bar .toast { margin: 6px 0 0; }
+.big-btn { margin: 0; padding: 16px 44px; font-size: 1.25rem; border-radius: 12px; color: #091121;
+  background: linear-gradient(90deg, #ffd27a, #ff8a5c); box-shadow: 0 6px 22px rgba(255, 138, 92, .45);
+  transition: transform .15s, box-shadow .15s; animation: pulse 2.4s ease-in-out infinite; }
+.big-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 28px rgba(255, 138, 92, .6); }
+@keyframes pulse { 50% { box-shadow: 0 6px 32px rgba(255, 138, 92, .75); } }
+@media (prefers-reduced-motion: reduce) { .big-btn { animation: none; transition: none; } }
 .map { width: 100%; border-radius: 10px; border: 1px solid #304461; background: #000; min-height: 200px; display: block; }
 footer { margin-top: 40px; color: #92a4bd; font-size: .85rem; }
+
+/* ===== Game theme: matches simulation/css/sim.css (used by design.html) ===== */
+.game-theme { --bg: #050b18; --panel: rgba(12, 22, 44, 0.92); --line: rgba(120, 170, 255, 0.16);
+  --line-strong: rgba(120, 170, 255, 0.34); --text: #e7eefc; --muted: #8396ba; --accent: #4cc3ff;
+  background: var(--bg); color: var(--text); font-family: 'Space Grotesk', system-ui, sans-serif; }
+.game-theme p, .game-theme .muted { color: #b8c6e2; }
+.game-theme .label { color: #7cf2c8; }
+.game-theme .panel { background: var(--panel); border-color: var(--line); border-radius: 12px; }
+.game-theme select, .game-theme input { background: #0a1428; border-color: var(--line-strong); color: var(--text); font-family: inherit; }
+.game-theme button { font-family: inherit; }
+.game-theme button:not(.big-btn):not(.secondary) { background: linear-gradient(135deg, #2b8cff, #23c6d8); color: #031026; }
+.game-theme button.secondary { background: rgba(255, 255, 255, .04); color: var(--text); border: 1px solid var(--line-strong); }
+.game-theme .launch-bar { background: linear-gradient(to top, #050b18 70%, rgba(5, 11, 24, 0)); }
+
+/* Top bar and tabs (same look as the simulation page) */
+.topbar { position: sticky; top: 0; z-index: 1000; display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 12px;
+  background: rgba(5, 11, 24, .96); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
+.topbar .brand { font-weight: 700; font-size: 16px; white-space: nowrap; color: var(--text); text-decoration: none; }
+.topbar .brand:hover span { text-decoration: underline; }
+.topbar nav.tabs { display: flex; gap: 2px; flex: 1; padding: 0; background: none; border: 0; overflow-x: auto; scrollbar-width: none; }
+.topbar nav.tabs::-webkit-scrollbar { display: none; }
+.topbar .tab-link { display: inline-flex; align-items: center; gap: 4px; padding: 9px 12px; border-radius: 8px; white-space: nowrap;
+  color: var(--muted); font-weight: 500; font-size: 14px; text-decoration: none; }
+.topbar .tab-link:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
+.topbar .tab-link.on { color: var(--text); background: rgba(76, 195, 255, .15); box-shadow: inset 0 -2px 0 var(--accent); }
