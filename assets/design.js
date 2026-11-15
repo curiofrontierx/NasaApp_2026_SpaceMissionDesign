@@ -67,29 +67,12 @@ function saveDesign() {
   return cfg;
 }
 
-$('saveBtn').onclick = () => toast(`Saved "${saveDesign().missionName}".`);
-
 // The simulation page reads the saved design from localStorage (key: STORAGE_KEY).
 $('simulateBtn').onclick = () => {
   const cost = selectedParts(readForm()).reduce((sum, p) => sum + p.cost, 0);
   if (cost > BUDGET) { toast(`Over budget by ${money(cost - BUDGET)}. Adjust your parts before simulating.`); return; }
   saveDesign();
   location.href = SIM_PAGE;
-};
-$('resetBtn').onclick = () => { localStorage.removeItem(STORAGE_KEY); applyForm(DEFAULTS); toast('Reset to defaults.'); };
-$('exportBtn').onclick = () => {
-  const cfg = readForm();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' }));
-  a.download = `${cfg.missionName.replace(/\W+/g, '_')}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
-$('importFile').onchange = async ev => {
-  const file = ev.target.files[0];
-  if (!file) return;
-  try { applyForm(JSON.parse(await file.text())); toast('Imported — click Save to keep it.'); }
-  catch { toast('Invalid JSON file.'); }
 };
 
 let saved = null;
