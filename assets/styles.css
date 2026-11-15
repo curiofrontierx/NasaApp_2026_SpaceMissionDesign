@@ -20,6 +20,24 @@ button.secondary { background: #304461; color: #edf4ff; }
 .part { padding: 8px 0; border-bottom: 1px dashed #304461; }
 .part-head { display: flex; justify-content: space-between; font-weight: 600; }
 .part p { margin: 2px 0 0; font-size: .9rem; }
+li.ok { color: #7ee0a1; } li.bad { color: #ff8a8a; } li.warn { color: #ffd27a; }
+button:disabled { opacity: .5; cursor: default; }
+.legend { margin-top: 14px; padding: 14px 16px; background: #0d1a2f; border: 1px solid #304461; border-radius: 12px; }
+.legend h3 { margin: 0 0 8px; font-size: 1rem; }
+.legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; font-size: .9rem; }
+.legend-grid > div { display: flex; align-items: center; gap: 8px; }
+.sym { display: inline-block; flex: none; width: 14px; height: 14px; }
+.sym.dot { border-radius: 50%; border: 1.5px solid #fff; }
+.sym.dot.small { width: 10px; height: 10px; margin: 0 2px; }
+.sym.line { height: 3px; border-radius: 2px; width: 18px; }
+.sym.ring { border-radius: 50%; border: 1.5px solid #ffd27a; background: rgba(255, 210, 122, .15); }
+.sym.pin { width: auto; height: auto; font-size: 14px; line-height: 1; }
+.cloud-legend { margin-top: 12px; font-size: .9rem; }
+.cloud-bar { height: 12px; border-radius: 6px; margin: 6px 0 2px;
+  background: linear-gradient(90deg, rgb(183,15,141), rgb(0,0,170), rgb(0,136,238), rgb(0,136,0), rgb(255,255,0), rgb(187,136,0), rgb(110,0,0)); }
+.cloud-labels { display: flex; justify-content: space-between; font-size: .8rem; color: #bac9df; }
+.site-pin { font-size: 22px; line-height: 24px; background: none; border: 0; }
+.small { font-size: .75rem; }
 .toast { min-height: 1.4em; color: #8de0d2; }
 .map { width: 100%; border-radius: 10px; border: 1px solid #304461; background: #000; min-height: 200px; display: block; }
 footer { margin-top: 40px; color: #92a4bd; font-size: .85rem; }

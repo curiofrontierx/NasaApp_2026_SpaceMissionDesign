@@ -1,7 +1,7 @@
 // Design Configuration: player hardware choices, validated and persisted in localStorage.
 const STORAGE_KEY = 'cfx.design.v1';
 // BUDGET, OPTIONS, LABELS and DEFAULTS come from assets/parts.js.
-const SIM_PAGE = 'simulation.html'; // simulation page (built by a teammate)
+const SIM_PAGE = 'simulation.html';
 
 const $ = id => document.getElementById(id);
 const find = (key, id) => OPTIONS[key].find(o => o.id === id);
