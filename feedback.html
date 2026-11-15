@@ -1199,7 +1199,7 @@ flyAgain=function(){location.href=REVIEW_PAGE;};
  const c=ok?calc():null;
  if(!c||!c.orb||!c.L){
   S.step=6; $('steps').style.display='none'; $('side').style.display='none'; document.querySelector('.grid').style.gridTemplateColumns='1fr';
-  $('main').innerHTML=`<h2>No mission report yet</h2><p class="lead">Fly a mission first. The report appears here after launch.</p><div class="nav"><span></span><a class="btn" style="text-decoration:none" href="${REVIEW_PAGE}">Go to the launch review →</a></div>`;
+  $('main').innerHTML=`<h2>No mission report yet</h2><p class="lead">Fly a mission first. The report appears here after launch.</p><div class="nav"><span></span><span style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="index.html">🏠 Home</a><a class="btn" style="text-decoration:none;display:inline-flex;align-items:center" href="design.html">🔁 Replay</a></span></div>`;
   hud(); return; }
  S.creative=!!fl.creative; S.result={...fl.result,c}; S.payout=fl.payout; S.launchFunds=fl.launchFunds;
  S.step=6; render();
