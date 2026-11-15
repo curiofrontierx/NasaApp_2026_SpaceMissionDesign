@@ -11,6 +11,7 @@
     <a href="index.html">Home</a>
     <a href="design.html" class="active">Design Configuration</a>
     <a href="nasa-data.html">Explore NASA Data</a>
+    <a href="methane.html">Methane Hotspots</a>
   </nav>
   <main>
     <p class="label">Mission Control</p>
@@ -37,6 +38,13 @@
       </section>
 
       <section class="panel">
+        <h2>My Designs</h2>
+        <p class="muted">Save this build under its mission name and load it again later. Designs are saved in this browser.</p>
+        <button id="saveNamedBtn">💾 Save design</button>
+        <div id="library"></div>
+      </section>
+
+      <section class="panel">
         <h2>Budget</h2>
         <div class="stat"><span>Spent</span><span id="costText"></span></div>
         <div class="bar"><div id="costBar"></div></div>
@@ -44,8 +52,18 @@
 
         <h2>Selected Parts</h2>
         <div id="parts"></div>
+        <p id="compat" class="bad"></p>
       </section>
     </div>
+
+    <section class="panel">
+      <h2>Build Overview</h2>
+      <p class="muted">How good each part is (green ≥ 75%, yellow ≥ 50%, red below), and what your satellite looks like. Updates as you change parts.</p>
+      <div class="grid">
+        <div id="ratings"></div>
+        <div id="satDiagram"></div>
+      </div>
+    </section>
 
     <section class="panel">
       <h2>Launch Weather</h2>
@@ -74,7 +92,9 @@
   </main>
   <script src="assets/sites.js"></script>
   <script src="assets/parts.js"></script>
+  <script src="assets/sat-diagram.js"></script>
   <script src="assets/nasa-weather.js"></script>
   <script src="assets/design.js"></script>
+  <script src="assets/design-library.js"></script>
 </body>
 </html>

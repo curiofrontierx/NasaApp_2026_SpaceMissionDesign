@@ -31,7 +31,20 @@ function selectedParts(cfg) {
   return Object.keys(OPTIONS).map(key => ({ label: LABELS[key], ...find(key, cfg[key]) }));
 }
 
+// Part combinations the catalog says cannot work. Returns a message, or '' if the design is fine.
+function incompatibility(cfg) {
+  const laser = ['cubelct', 'scot80'].includes(cfg.transmitter);
+  if (cfg.battery === 'nicd' && (['lwir', 'lidar'].includes(cfg.detector) || laser)) {
+    const what = ['lwir', 'lidar'].includes(cfg.detector) ? find('detector', cfg.detector).name : find('transmitter', cfg.transmitter).name;
+    return `⚠ Vintage NiCd Pack can't power the ${what}: the satellite will fail at launch. Pick a bigger battery, a lower-power detector (NIR, SWIR, MWIR or Zoom), or a radio transmitter instead of a laser.`;
+  }
+  return '';
+}
+
 function update() {
+  $('compat').textContent = incompatibility(readForm());
+  renderRatings(readForm(), $('ratings'));
+  renderSatellite(readForm(), $('satDiagram'));
   const parts = selectedParts(readForm());
   const cost = parts.reduce((sum, p) => sum + p.cost, 0);
   $('costText').textContent = `${money(cost)} / ${money(BUDGET)}`;
@@ -119,6 +132,8 @@ function saveDesign() {
 $('simulateBtn').onclick = () => {
   const cost = selectedParts(readForm()).reduce((sum, p) => sum + p.cost, 0);
   if (cost > BUDGET) { toast(`Over budget by ${money(cost - BUDGET)}. Adjust your parts before simulating.`); return; }
+  const clash = incompatibility(readForm());
+  if (clash && !confirm(`${clash.replace('⚠ ', '')}\n\nSimulate anyway?`)) return;
   if (!weatherRec) { toast('Still checking launch weather. Try again in a moment.'); return; }
   const j = weatherRec.judge;
   if (j.verdict === 'NO-GO' && !confirm(`Launch weather is NO-GO: ${j.reasons.join(', ')}.\n` +

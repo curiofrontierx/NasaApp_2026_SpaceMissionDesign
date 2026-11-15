@@ -56,3 +56,15 @@ const OPTIONS = {
 
 const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector', site: 'Launch site' };
 const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir', site: 'cape' };
+
+// How good each part is (0–100), shown as bars on the Design page.
+// Battery, thruster, detector: the catalog's effectiveness %.
+// Storage: average of the catalog's capacity, speed, radiation and mass/power stars (cost left out; the budget covers it).
+// Transmitter: (3 × downlink speed + weather + aiming + mass/power stars) / 30, since speed matters most for getting data down.
+const RATINGS = {
+  battery: { nicd: 30, nih2: 45, liion40: 60, liion100: 75, solid: 85, ves: 90, rtg: 100 },
+  thruster: { coldgas: 25, resistojet: 40, hydrazine: 60, ascent: 75, electrospray: 85, dualmode: 92, hall: 100 },
+  storage: { a3200: 40, kryten: 50, cfc400: 60, rh3480: 75, simplistor: 70, spacestor: 70, moog: 80 },
+  transmitter: { uhf: 60, sband: 53, srs4: 63, ewc27: 67, xband: 63, xlink: 73, ewc34: 73, cubelct: 50, xsdr: 70, scot80: 60 },
+  detector: { nir: 25, swir: 60, mwir: 65, lwir: 75, zoom: 90, lidar: 100 }
+};

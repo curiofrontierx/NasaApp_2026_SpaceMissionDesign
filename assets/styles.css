@@ -20,6 +20,12 @@ button.secondary { background: #304461; color: #edf4ff; }
 .part { padding: 8px 0; border-bottom: 1px dashed #304461; }
 .part-head { display: flex; justify-content: space-between; font-weight: 600; }
 .part p { margin: 2px 0 0; font-size: .9rem; }
+button:disabled { opacity: .5; cursor: default; }
+.legend { margin-top: 14px; padding: 14px 16px; background: #0d1a2f; border: 1px solid #304461; border-radius: 12px; }
+.small { font-size: .75rem; }
+.rating { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 10px; font-size: .9rem; }
+.rating .bar { height: 14px; margin: 6px 0; }
+.rating.overall { font-weight: bold; border-top: 1px dashed #304461; margin-top: 6px; padding-top: 6px; }
 .toast { min-height: 1.4em; color: #8de0d2; }
 .map { width: 100%; border-radius: 10px; border: 1px solid #304461; background: #000; min-height: 200px; display: block; }
 footer { margin-top: 40px; color: #92a4bd; font-size: .85rem; }
