@@ -17,6 +17,9 @@ button.secondary { background: #304461; color: #edf4ff; }
 .ok { color: #7ee0a1; } .bad { color: #ff8a8a; } .warn { color: #ffd27a; }
 .bar { height: 10px; background: #091121; border-radius: 6px; overflow: hidden; margin: 4px 0 10px; }
 .bar > div { height: 100%; background: #8de0d2; transition: width .2s; }
+.part { padding: 8px 0; border-bottom: 1px dashed #304461; }
+.part-head { display: flex; justify-content: space-between; font-weight: 600; }
+.part p { margin: 2px 0 0; font-size: .9rem; }
 .toast { min-height: 1.4em; color: #8de0d2; }
 .map { width: 100%; border-radius: 10px; border: 1px solid #304461; background: #000; min-height: 200px; display: block; }
 footer { margin-top: 40px; color: #92a4bd; font-size: .85rem; }

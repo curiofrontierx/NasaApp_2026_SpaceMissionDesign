@@ -58,20 +58,25 @@ function updateOutlook() {
   const layer = LAYERS.find(l => l.id === readForm().layer);
   let design = null;
   try { design = JSON.parse(localStorage.getItem(DESIGN_KEY)); } catch { /* ignore */ }
-  const inst = design ? design.instrument : null;
+  const inst = design ? design.detector : null;
+  const DETECTORS = {
+    nir: 'Basic NIR Context Camera', swir: 'Wide-Swath SWIR Scanner', mwir: 'MWIR Flare & Fire Tracker',
+    lwir: 'LWIR Thermal Gas Imager', zoom: 'Point-Source Zoom Spectrometer', lidar: 'Active TDLAS Methane LIDAR'
+  };
   $('designText').textContent = design ? design.missionName : 'None saved';
-  $('instText').textContent = { swir: 'SWIR (passive)', lidar: 'Active LIDAR', both: 'SWIR + LIDAR' }[inst] || '—';
+  $('instText').textContent = DETECTORS[inst] || '—';
   $('layerType').textContent = { day: 'Daytime reflectance', cloud: 'Cloud cover', night: 'Night-time' }[layer.type];
 
-  const swirOnly = inst === 'swir';
+  // Sunlight-dependent detectors are blind at night and under clouds.
+  const swirOnly = ['nir', 'swir', 'zoom'].includes(inst);
   const msgs = {
     day: 'Daytime view: passive SWIR works where skies are clear. White areas are clouds that block methane retrievals.',
     cloud: swirOnly
-      ? 'High cloud-fraction areas are effectively invisible to your SWIR-only satellite.'
-      : 'LIDAR can measure through gaps in thin cloud, but thick cloud still limits retrievals.',
+      ? 'High cloud-fraction areas are effectively invisible to your sunlight-based detector.'
+      : 'Your detector copes better with thin cloud, but thick storm cloud still limits retrievals.',
     night: swirOnly
-      ? 'At night your SWIR spectrometer collects no usable signal — consider adding LIDAR.'
-      : 'Active LIDAR can still measure methane on the night side.'
+      ? 'At night your sunlight-based detector collects no usable signal. Thermal (MWIR/LWIR) or LIDAR detectors work at night.'
+      : 'Your detector can still measure on the night side.'
   };
   $('outlook').textContent = (design ? '' : 'Save a design on the Design Configuration page for a tailored outlook. ') + msgs[layer.type];
 }

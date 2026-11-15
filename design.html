@@ -22,29 +22,29 @@
         <h2>Hardware</h2>
         <label for="missionName">Mission name</label>
         <input id="missionName" maxlength="40">
-        <label for="engine">Launch engine</label>
-        <select id="engine"></select>
         <label for="battery">Battery</label>
         <select id="battery"></select>
-        <label for="instrument">Detection instrument</label>
-        <select id="instrument"></select>
-        <label for="orbit">Orbit</label>
-        <select id="orbit"></select>
-        <label><input type="checkbox" id="shielding"> Radiation shielding (+$8M, +40 kg)</label>
+        <label for="thruster">Thruster</label>
+        <select id="thruster"></select>
+        <label for="storage">Data storage</label>
+        <select id="storage"></select>
+        <label for="transmitter">Transmitter</label>
+        <select id="transmitter"></select>
+        <label for="detector">Methane detector</label>
+        <select id="detector"></select>
       </section>
 
       <section class="panel">
-        <h2>Mission Summary</h2>
-        <div class="stat"><span>Cost</span><span id="costText"></span></div>
+        <h2>Budget</h2>
+        <div class="stat"><span>Spent</span><span id="costText"></span></div>
         <div class="bar"><div id="costBar"></div></div>
-        <div class="stat"><span>Payload mass</span><span id="massText"></span></div>
-        <div class="bar"><div id="massBar"></div></div>
-        <div class="stat"><span>Power balance</span><span id="powerText"></span></div>
-        <div class="stat"><span>Methane detection score</span><span id="scoreText"></span></div>
-        <div class="stat"><span>Status</span><span id="statusText"></span></div>
-        <ul id="issues" class="muted"></ul>
+        <div class="stat"><span>Remaining</span><span id="remainingText"></span></div>
 
-        <button id="saveBtn">Save design</button>
+        <h2>Selected Parts</h2>
+        <div id="parts"></div>
+
+        <button id="simulateBtn">🚀 Simulate</button>
+        <button id="saveBtn" class="secondary">Save design</button>
         <button id="resetBtn" class="secondary">Reset to defaults</button>
         <button id="exportBtn" class="secondary">Export JSON</button>
         <label for="importFile">Import JSON</label>
@@ -55,6 +55,7 @@
 
     <footer>An independent team project. This is not an official NASA website.</footer>
   </main>
+  <script src="assets/parts.js"></script>
   <script src="assets/design.js"></script>
 </body>
 </html>
