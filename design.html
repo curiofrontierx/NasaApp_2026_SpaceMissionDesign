@@ -10,7 +10,7 @@
   <nav>
     <a href="index.html">Home</a>
     <a href="design.html" class="active">Design Configuration</a>
-    <a href="nasa-data.html">NASA Data Configuration</a>
+    <a href="nasa-data.html">Explore NASA Data</a>
   </nav>
   <main>
     <p class="label">Mission Control</p>
@@ -32,6 +32,8 @@
         <select id="transmitter"></select>
         <label for="detector">Methane detector</label>
         <select id="detector"></select>
+        <label for="site">Launch site</label>
+        <select id="site"></select>
       </section>
 
       <section class="panel">
@@ -42,15 +44,37 @@
 
         <h2>Selected Parts</h2>
         <div id="parts"></div>
-
-        <button id="simulateBtn">🚀 Simulate</button>
-        <p class="toast" id="toast"></p>
       </section>
     </div>
 
+    <section class="panel">
+      <h2>Launch Weather</h2>
+      <p class="muted">Today's weather at your launch site, read from live NASA satellite imagery. It updates when you change the site.</p>
+      <div class="grid">
+        <div>
+          <div class="stat"><span>Launch site</span><span id="siteText">—</span></div>
+          <div class="stat"><span>Data source</span><span id="wSrc">—</span></div>
+          <div class="stat"><span>Cloud cover</span><span id="wCloud">—</span></div>
+          <div class="stat"><span>Thunderstorms</span><span id="wStorm">—</span></div>
+          <div class="stat"><span>Wind (simulated)</span><span id="wWind">—</span></div>
+          <div class="stat"><span>Launch decision</span><span id="wVerdict">—</span></div>
+          <p id="wReasons" class="muted"></p>
+          <button id="weatherBtn" class="secondary">🔄 Re-check weather</button>
+        </div>
+        <div>
+          <img id="wImg" class="map" alt="Satellite image around the launch site">
+          <p id="wImgNote" class="muted"></p>
+        </div>
+      </div>
+      <button id="simulateBtn">🚀 Simulate</button>
+      <p class="toast" id="toast"></p>
+    </section>
+
     <footer>An independent team project. This is not an official NASA website.</footer>
   </main>
+  <script src="assets/sites.js"></script>
   <script src="assets/parts.js"></script>
+  <script src="assets/nasa-weather.js"></script>
   <script src="assets/design.js"></script>
 </body>
 </html>

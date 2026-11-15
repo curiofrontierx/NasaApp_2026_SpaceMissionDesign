@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NASA Data Configuration | CurioFrontierX</title>
+  <title>Explore NASA Data | CurioFrontierX</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <nav>
     <a href="index.html">Home</a>
     <a href="design.html">Design Configuration</a>
-    <a href="nasa-data.html" class="active">NASA Data Configuration</a>
+    <a href="nasa-data.html" class="active">Explore NASA Data</a>
   </nav>
   <main>
-    <p class="label">Earth Observation</p>
-    <h1>NASA Data Configuration</h1>
-    <p>Live imagery from NASA GIBS (no API key required). Explore how clouds and day/night cycles affect methane detection over emission hotspots.</p>
+    <p class="label">Earth Observation · Optional</p>
+    <h1>Explore NASA Data</h1>
+    <p>Browse live imagery from NASA GIBS (no API key required) and see how clouds and day/night cycles affect methane detection over emission hotspots. Launch weather is checked on the <a href="design.html" style="color:#9cdcff">Design Configuration</a> page.</p>
 
     <div class="grid">
       <section class="panel">
@@ -48,28 +48,6 @@
     </div>
 
     <section class="panel">
-      <h2>Launch Site Weather</h2>
-      <p class="muted">Pick a spaceport and check today's weather from live NASA satellite imagery. The result is saved in your browser for the launch.</p>
-      <div class="grid">
-        <div>
-          <label for="site">Launch site</label>
-          <select id="site"></select>
-          <button id="weatherBtn">🌦 Check weather</button>
-          <div class="stat"><span>Data source</span><span id="wSrc">—</span></div>
-          <div class="stat"><span>Cloud cover</span><span id="wCloud">—</span></div>
-          <div class="stat"><span>Thunderstorms</span><span id="wStorm">—</span></div>
-          <div class="stat"><span>Wind (simulated)</span><span id="wWind">—</span></div>
-          <div class="stat"><span>Launch decision</span><span id="wVerdict">—</span></div>
-          <p id="wReasons" class="muted">Press "Check weather" to read live NASA imagery.</p>
-        </div>
-        <div>
-          <img id="wImg" class="map" alt="Satellite image around the launch site">
-          <p id="wImgNote" class="muted"></p>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel">
       <h2 id="mapTitle">Imagery</h2>
       <img id="map" class="map" alt="NASA GIBS imagery">
       <p class="muted" id="mapStatus"></p>
@@ -79,6 +57,5 @@
     <footer>An independent team project. This is not an official NASA website.</footer>
   </main>
   <script src="assets/nasa-data.js"></script>
-  <script src="assets/nasa-weather.js"></script>
 </body>
 </html>
