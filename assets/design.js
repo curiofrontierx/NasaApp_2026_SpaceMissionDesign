@@ -1,7 +1,7 @@
 // Design Configuration: player hardware choices, validated and persisted in localStorage.
 const STORAGE_KEY = 'cfx.design.v1';
 // BUDGET comes from agencyBudget(); OPTIONS, LABELS and DEFAULTS come from assets/parts.js.
-const SIM_PAGE = 'simulation.html'; // simulation page (built by a teammate)
+const SIM_PAGE = 'simulation.html'; // simulation page
 
 // Shared budget with simulation.html: the agency's current funds from its saved game (mbm.sim.save),
 // else the starting funds from the game setup (mbm.config), else SHARED_START_FUNDS.
@@ -16,25 +16,31 @@ const SHARED_START_FUNDS = 3000000;
     if (typeof c.startFunds !== 'number') localStorage.setItem('mbm.config', JSON.stringify({ ...c, startFunds: SHARED_START_FUNDS }));
   } catch { /* storage blocked */ }
 })();
+// Read again on every update, so changing "Starting funds" in Mission settings moves the Funds left pill at once.
 function agencyBudget() {
+  let c = null;
+  try { c = JSON.parse(localStorage.getItem('mbm.config')); } catch { /* no setup */ }
   try {
     const s = JSON.parse(localStorage.getItem('mbm.sim.save'));
-    if (s && typeof s.funds === 'number' && !s.ended) return { amount: Math.max(0, Math.round(s.funds)), source: 'game' };
+    // a running game keeps its own money, unless the settings changed (then the next Simulate starts a new game)
+    const GAME_KEYS = ['durationYears', 'startDate', 'difficulty', 'startFunds', 'annualBudget', 'eventScale'];
+    const same = s && s.cfg && c && GAME_KEYS.every(k => c[k] === undefined || String(s.cfg[k]) === String(c[k]));
+    if (s && typeof s.funds === 'number' && !s.ended && same) return { amount: Math.max(0, Math.round(s.funds)), source: 'game' };
   } catch { /* no game yet */ }
-  try {
-    const c = JSON.parse(localStorage.getItem('mbm.config'));
-    if (c && typeof c.startFunds === 'number') return { amount: c.startFunds, source: 'config' };
-  } catch { /* no setup */ }
+  if (c && typeof c.startFunds === 'number') return { amount: c.startFunds, source: 'config' };
   return { amount: SHARED_START_FUNDS, source: 'default' };
 }
-const BUDGET_INFO = agencyBudget();
-const BUDGET = BUDGET_INFO.amount;
+let BUDGET_INFO = agencyBudget();
+let BUDGET = BUDGET_INFO.amount;
 const BUDGET_SOURCE_TEXT = { game: 'Agency funds from your simulation game', config: 'Starting funds from the game setup', default: 'Starting agency funds' };
 
 const $ = id => document.getElementById(id);
 const find = (key, id) => OPTIONS[key].find(o => o.id === id);
 const money = n => '$' + n.toLocaleString('en-US');
 
+// The five parts of a design. Every list always has a part selected (the default design until the player changes it).
+const PART_KEYS = ['battery', 'thruster', 'storage', 'transmitter', 'detector'];
+const missingParts = cfg => PART_KEYS.filter(k => !find(k, cfg[k]));
 for (const key of Object.keys(OPTIONS)) {
   $(key).innerHTML = OPTIONS[key]
     .map(o => `<option value="${o.id}">${o.name}${o.cost ? ` (${money(o.cost)})` : ''}</option>`).join('');
@@ -51,13 +57,14 @@ function readForm() {
 
 function applyForm(cfg) {
   const c = { ...DEFAULTS, ...cfg };
+  // a part that is missing (or no longer exists) falls back to the default part, so no list is ever blank
   for (const key of Object.keys(OPTIONS)) $(key).value = find(key, c[key]) ? c[key] : DEFAULTS[key];
-  $('missionName').value = String(c.missionName).slice(0, 40);
+  $('missionName').value = String(c.missionName || DEFAULTS.missionName).slice(0, 40);
   update();
 }
 
 function selectedParts(cfg) {
-  return Object.keys(OPTIONS).map(key => ({ cat: key, label: LABELS[key], ...find(key, cfg[key]) }));
+  return Object.keys(OPTIONS).filter(key => find(key, cfg[key])).map(key => ({ cat: key, label: LABELS[key], ...find(key, cfg[key]) }));
 }
 
 // Part combinations the catalog says cannot work. Returns a message, or '' if the design is fine.
@@ -71,9 +78,17 @@ function incompatibility(cfg) {
 }
 
 function update() {
+  BUDGET_INFO = agencyBudget();
+  BUDGET = BUDGET_INFO.amount;
   $('compat').textContent = incompatibility(readForm());
-  renderRatings(readForm(), $('ratings'));
-  renderSatellite(readForm(), $('satDiagram'));
+  const missing = missingParts(readForm());
+  if (missing.length) {
+    $('ratings').innerHTML = `<p class="muted">🧩 Choose all five parts to see their ratings and a drawing of your satellite. <b>${5 - missing.length} of 5</b> chosen.</p>`;
+    $('satDiagram').innerHTML = '';
+  } else {
+    renderRatings(readForm(), $('ratings'));
+    renderSatellite(readForm(), $('satDiagram'));
+  }
   const parts = selectedParts(readForm());
   const cost = parts.reduce((sum, p) => sum + p.cost, 0);
   // Budget is shown only in the top-right pill (always visible in the top bar).
@@ -140,6 +155,12 @@ function saveDesign() {
 
 // The simulation page reads the saved design (STORAGE_KEY) and launch weather (LAUNCH_KEY) from localStorage.
 $('simulateBtn').onclick = () => {
+  const missing = missingParts(readForm());
+  if (missing.length) {
+    toast(`Choose a part for: ${missing.map(k => LABELS[k].toLowerCase()).join(', ')}.`);
+    $(missing[0]).focus(); $(missing[0]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   const cost = selectedParts(readForm()).reduce((sum, p) => sum + p.cost, 0);
   if (cost > BUDGET) { toast(`Over budget by ${money(cost - BUDGET)}. Adjust your parts before simulating.`); return; }
   const clash = incompatibility(readForm());
@@ -154,6 +175,14 @@ $('simulateBtn').onclick = () => {
 
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { /* corrupt data: ignore */ }
+// no saved design yet: start from the default design in assets/parts.js (DEFAULTS), marked as a starter design
 applyForm(saved || DEFAULTS);
+if (!saved) {
+  const tag = document.getElementById('starterTag');
+  if (tag) tag.hidden = false;
+  // the tag goes away as soon as the player changes the design
+  const clear = () => { if (tag) tag.hidden = true; };
+  [...Object.keys(OPTIONS), 'missionName'].forEach(k => $(k).addEventListener(k === 'missionName' ? 'input' : 'change', clear, { once: true }));
+}
 if (saved && saved.savedAt) toast(`Loaded saved design from ${new Date(saved.savedAt).toLocaleString()}.`);
 checkWeather();

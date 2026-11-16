@@ -75,14 +75,7 @@ const MAPC = (() => {
         const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
         polys.forEach(p => p.forEach(ring => {
           const lons = ring.map(c => c[0]);
-          const span = Math.max(...lons) - Math.min(...lons);
-          // Antarctica's ring wraps the whole globe down to the pole and is already drawn correctly
-          const polar = ring.some(c => c[1] < -85);
-          if (span > 180 && !polar) {
-            ring.forEach(c => { if (c[0] < 0) c[0] += 360; });
-            // the map shows exactly one world: keep the shifted part (e.g. Russia's Chukotka tip) on its edge
-            ring.forEach(c => { if (c[0] > 180) c[0] = 180; });
-          }
+          if (Math.max(...lons) - Math.min(...lons) > 180) ring.forEach(c => { if (c[0] < 0) c[0] += 360; });
         }));
         const st = featureStats(f); f.properties._area = st.area; f.properties._lat = st.lat;
       });

@@ -59,7 +59,7 @@ const LaunchView = (() => {
       <div class="panel">
         <h2>Plan a launch</h2>
         <p class="fine" style="margin-top:0">Pick a design, a ride to space and a target orbit. You'll fly the rocket yourself on launch day, with an autopilot you can take over from at any moment.</p>
-        ${!ds.length ? `<div class="note warn">No satellite design yet. Configure one on the Design Configuration page, then press Simulate.</div><a class="btn" href="${PAGES.design}">🔧 Open Design Configuration</a>` : `
+        ${!ds.length ? `<div class="note warn">No satellite design yet. Configure one on the Design step, then press Simulate.</div><a class="btn" href="${PAGES.design}">🔧 Open Design Configuration</a>` : `
         <h3>Satellite</h3>
         <div class="form-grid">
           <span>Design</span><select id="lp-design">${ds.map(x => `<option ${x.name === sel.design ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
@@ -84,11 +84,11 @@ const LaunchView = (() => {
         <div class="note ${feas.ok ? '' : 'warn'}">${feas.ok ? `Launch azimuth ${feas.az.toFixed(1)}°. Earth's rotation ${feas.boost >= 0 ? 'gives you' : 'costs you'} <b class="mono">${Math.abs(feas.boost).toFixed(0)} m/s</b>. ${orbitAdvice(sel.alt, inc)}` : esc(feas.msg)}</div>
         <h3>Cost</h3>
         <div class="kv">${comp ? `<span>Your parts</span><b>${fmt$(comp.partsCost * sel.qty)}</b><span>Subsystems, frame &amp; integration</span><b>${fmt$((comp.cost - comp.partsCost) * sel.qty)}</b>` : ''}<span>Build ${sel.qty}× satellite</span><b>${fmt$(comp ? comp.cost * sel.qty : 0)}</b><span>Launch</span><b>${fmt$(price)}${S.t < S.launchDiscountUntil ? ' (50% partnership discount)' : ''}</b>
-          <span>Total</span><b>${fmt$(total)}</b><span>Funds after booking</span><b style="color:${S.funds - total < 0 ? 'var(--fail)' : ''}">${fmt$(S.funds - total)}</b><span>Launch date</span><b>${SIM.fmtDate(date)}</b><span>Payload mass</span><b>${payload.toFixed(1)} kg${opt.maxPayload ? ` of ${opt.maxPayload} kg` : ''}</b></div>
+          <span>Total</span><b>${fmt$(total)}</b><span>Funds after launch</span><b style="color:${S.funds - total < 0 ? 'var(--fail)' : ''}">${fmt$(S.funds - total)}</b><span>Launch</span><b>Now (straight to orbit)</b><span>Payload mass</span><b>${payload.toFixed(1)} kg${opt.maxPayload ? ` of ${opt.maxPayload} kg` : ''}</b></div>
         ${comp ? extrasHTML(comp, sel.qty) : ''}
         ${tooHeavy ? `<div class="note warn">Too heavy for this rocket.</div>` : ''}${cubesatBad ? `<div class="note warn">The ISS deployer only takes CubeSats (up to 16U).</div>` : ''}
         <div class="book-row">
-          <button class="btn" id="lp-book" ${feas.ok && comp && !tooHeavy && !cubesatBad ? '' : 'disabled'}>${S.launches.length ? '📅 Book another launch' : '📅 Book this launch'}</button>
+          <button class="btn" id="lp-book" ${feas.ok && comp && !tooHeavy && !cubesatBad ? '' : 'disabled'}>${S.satellites.length ? '🚀 Launch another' : '🚀 Launch'}</button>
           ${nextL ? `<button class="btn warp-orbit" data-warp-orbit="${nextL.id}" title="Jump to launch day, fly to orbit automatically, then release the satellite">⏭ Warp to orbit</button>
           <button class="btn ghost" data-warp="${nextL.id}" title="Jump to launch day and fly the rocket yourself">⏩ Warp to launch day</button>` : ''}
         </div>
@@ -105,7 +105,8 @@ const LaunchView = (() => {
         }).join('')}</ul>` : '<p class="muted">Nothing scheduled.</p>'}
         ${flown.length ? `<h3>Past launches</h3><ul class="sched">${flown.map(l => `<li><b>${l.qty}× ${esc(l.designName)}</b><span class="muted">${SIM.fmtDate(l.date)} · ${l.outcome === 'success' ? '✅ success' : l.outcome === 'recovered' ? '↩ aborted, payload recovered' : '❌ failure'}</span></li>`).join('')}</ul>` : ''}
         <h3>How launching works</h3>
-        <p class="fine" style="margin-top:0">1. Choose a ride and press <b>📅 Book this launch</b>.<br>2. Press <b>⏭ Warp to orbit</b>: time jumps to launch day and the rocket flies itself to orbit. (Prefer to fly? Press <b>⏩ Warp to launch day</b> instead, then <b>🚀 Go to the pad</b>.)<br>3. Press <b>🛰️ Deploy satellite</b>, decide what happens to the empty rocket stage, and pick where to go next.</p>
+        <p class="fine" style="margin-top:0"><b>🚀 Launch</b> builds the satellite, launches it and releases it into orbit at once; the mission clock then runs at 1 year per second and Mission Control shows what happens. The launch-weather risk from the Design page still applies.</p>
+        <p class="fine" style="margin-top:0">Launches booked in an older game still work like this: 1. Choose a ride.<br>2. Press <b>⏭ Warp to orbit</b>: time jumps to launch day and the rocket flies itself to orbit. (Prefer to fly? Press <b>⏩ Warp to launch day</b> instead, then <b>🚀 Go to the pad</b>.)<br>3. Press <b>🛰️ Deploy satellite</b>, decide what happens to the empty rocket stage, and pick where to go next.</p>
         <h3>Flying it yourself</h3>
         <div class="keys">The flight is fully 3D. Drag with the mouse to look around the rocket, scroll to zoom (all the way out to see the whole planet).<br><kbd>W</kbd>/<kbd>S</kbd> pitch · <kbd>A</kbd>/<kbd>D</kbd> yaw (turn left/right) · <kbd>Q</kbd>/<kbd>E</kbd> roll · <kbd>Shift</kbd>/<kbd>Ctrl</kbd> throttle · <kbd>Z</kbd> full / <kbd>X</kbd> cut · <kbd>Space</kbd> stage · <kbd>T</kbd> autopilot on/off · <kbd>F</kbd> drop the fairing · <kbd>M</kbd> map view · <kbd>,</kbd>/<kbd>.</kbd> time warp · <kbd>Enter</kbd> deploy.<br>Real forces act on the rocket: gravity, thrust that changes with air pressure, drag that peaks at the sound barrier, winds aloft, heating and cold. The rocket is stable, so the air keeps its nose pointed into the wind, but steering hard while the air pressure is high (max-Q) can break it apart, and dropping the fairing below ~100 km cooks the satellites.<br>
         Touching the controls pauses the autopilot. When you let go for 2.5 s it re-plans from wherever you left the rocket. You can also give it a command at any time: take off, reach orbit, circularise, change orbit, deorbit, or land.</div>
@@ -163,9 +164,7 @@ const LaunchView = (() => {
     on('#lp-book', 'click', () => {
       const r = SIM.bookLaunch(sel.opt, d, sel.qty, { alt: sel.alt, inc, site: site.id, recover: sel.recover });
       if (!r.ok) { UI.toast(r.msg, 'bad'); return; }
-      UI.toast(`Launch booked for ${SIM.fmtDate(r.launch.date)}.`, 'good', 'Launch');
-      UI.updateTop(true);
-      renderPlanner();
+      launchNow(r.launch);
     });
     $$('#launch-planner [data-warp]').forEach(x => x.onclick = () => { autoOrbit = null; GUIDE.warpToLaunch(x.dataset.warp); UI.updateTop(true); });
     $$('#launch-planner [data-warp-orbit]').forEach(x => x.onclick = () => { autoOrbit = x.dataset.warpOrbit; GUIDE.warpToLaunch(x.dataset.warpOrbit, { toOrbit: true }); UI.updateTop(true); });
@@ -257,16 +256,10 @@ const LaunchView = (() => {
 
   function endFlight() {
     const S = SIM.state;
-    const deployed = !!(flight && flight.deployed);
     S.flightActive = false;
     flight = null; flightL = null;
     $('#flight').hidden = true; $('#launch-planner').hidden = false;
     renderPlanner();
-    // satellites are in orbit: the world clock runs at the default 10 min/s, so one orbit takes about 10 s
-    if (deployed && !S.ended) {
-      UI.setWarp(600); S.paused = false;
-      UI.toast('The clock is running at 10 min per second: one lap of the Earth takes about 10 s. Press » to speed up or « to slow down.', 'good', 'Satellite in orbit');
-    }
     UI.updateTop(true);
   }
 
@@ -670,6 +663,32 @@ const LaunchView = (() => {
     return true;
   }
   // launch day, straight to orbit (used by the schedule and the launch-day pop-up)
+  // 🚀 Launch: no waiting for launch day and no flight scene. The rocket goes now (with the launch-weather
+  // risk from the Design page), the satellites are released at the target orbit, and the mission clock runs.
+  function launchNow(L) {
+    const S = SIM.state;
+    L.date = S.t;
+    let risk = 0.03;
+    try { const w = JSON.parse(safeGet('cfx.launch.v1') || 'null'); if (w && w.judge) risk = Math.min(0.6, Math.max(0.02, w.judge.risk)); } catch { /* no weather check */ }
+    if (Math.random() < risk) {
+      SIM.launchResult(L, { ok: false, reason: `the rocket failed in flight (launch-weather risk ${Math.round(risk * 100)}%)` });
+      UI.toast(`${L.designName} was lost at launch (weather risk ${Math.round(risk * 100)}%). Try again or pick a site with better weather.`, 'bad', 'Launch failed');
+      UI.updateTop(true); renderPlanner();
+      return;
+    }
+    const { alt, inc } = L.target;
+    const raan = Math.random() * ORB.TAU;
+    for (let k = 0; k < L.qty; k++) {
+      const el = { a: ORB.RE + alt * 1000, e: 0.0008, i: inc * ORB.DEG, raan, argp: 0, M: L.qty > 1 ? k / L.qty * ORB.TAU : 0, epoch: S.t };
+      SIM.addSatellite(L.qty > 1 ? `${L.designName}-${String.fromCharCode(65 + k)}` : L.designName, L.parts, el, { opt: L.opt, date: SIM.fmtDate(S.t) });
+    }
+    SIM.launchResult(L, { ok: true, apo: alt, peri: alt, inc });
+    UI.toast(`${L.qty}× ${L.designName} is in orbit at ${alt} km. The mission is running.`, 'good', '🚀 Launched');
+    S.paused = false;
+    UI.setWarp(DEFAULT_WARP);
+    UI.show('ops');
+    UI.updateTop(true);
+  }
   function flyToOrbit(L) { if (!L || L.status !== 'ready') return; UI.show('launch'); startFlight(L); warpToOrbit(); }
   return { autoFly, flyToOrbit, show, frame, preselect, renderPlanner, deploy, fastForward, setMap: on => { mapMode = on; }, get flying() { return !!flight; }, get flight() { return flight; }, warpToOrbit };
 })();

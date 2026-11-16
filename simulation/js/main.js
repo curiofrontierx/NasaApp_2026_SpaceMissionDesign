@@ -59,11 +59,13 @@
   delete S.advDone;
   UI.bind();
   GUIDE.init();
-  UI.setWarp(S.warp || 600);
+  UI.setWarp(S.warp || DEFAULT_WARP);
 
   let view = 'map';
   try { view = sessionStorage.getItem('mbm.view') || (S.satellites.length ? 'map' : 'launch'); } catch { /* ignore */ }
   if (input && input.isNew && !params.get('demo')) view = 'launch';
+  // nothing in orbit yet: open straight on the Launch tab, ready to press 🚀 Launch
+  if (!S.satellites.some(s => s.status === 'active') && !params.get('demo')) view = 'launch';
   if (params.get('view')) view = params.get('view');
   UI.show(view);
   UI.updateTop(true);
@@ -76,16 +78,17 @@
   if (params.get('select') && S.satellites.length) setTimeout(() => { UI.show('orbit'); OrbitView.select(S.satellites[0].id); }, 200);
   if (demoNote) UI.toast(demoNote, 'good');
   else if (loaded) UI.toast(`Welcome back. Continuing from ${SIM.fmtDate(S.t)}.`, 'good', 'Save loaded');
-  else if (!safeGet('mbm.sim.seenHelp')) { safeSet('mbm.sim.seenHelp', '1'); GUIDE.firstRun(); }
-  else if (input && input.isNew) UI.toast(`${input.design.name} arrived from the Design Configuration page. Book a launch for it.`, 'good', 'Design received');
-  if (!input && !demoNote) UI.toast('No satellite design found. Configure one on the Design Configuration page first.', 'warn');
+  // (no welcome dialog: the page opens ready to launch; the tutorial is still under ? in the top bar)
+  else if (!safeGet('mbm.sim.seenHelp')) safeSet('mbm.sim.seenHelp', '1');
+  else if (input && input.isNew) UI.toast(`${input.design.name} arrived from the Design step. Book a launch for it.`, 'good', 'Design received');
+  if (!input && !demoNote) UI.toast('No satellite design found. Configure one on the Design step first.', 'warn');
 
   function help() {
     safeSet('mbm.sim.seenHelp', '1');
     UI.modal(`<h2>Mission: Blue Marble</h2>
       <p>You have <b>${S.cfg.durationYears} years</b> and <b>${fmt$(S.funds)}</b> to find methane leaks from space and slow global warming. Money arrives every month and grows when your data leads to repairs.</p>
       <ol style="padding-left:18px;line-height:1.7">
-        <li><b>🔧 Your satellite</b> comes from the Design Configuration page. The frame, reaction wheels and solar panels are added for you.</li>
+        <li><b>🔧 Your satellite</b> comes from the Design step. The frame, reaction wheels and solar panels are added for you.</li>
         <li><b>🚀 Launch:</b> book a ride for it, then fly it on launch day. The autopilot can do it all, or you can take the controls.</li>
         <li><b>🛰️ Orbit Viewer:</b> watch your fleet in 3D, then click a satellite to point it, fire its thrusters or transmit data.</li>
         <li><b>🌡️ Methane Emissions:</b> see where methane comes from, where your satellites look and which leaks you've found.</li>
@@ -100,12 +103,13 @@
   // main loop
   let last = performance.now();
   function loop(now) {
-    const dt = Math.min(0.25, (now - last) / 1000);
+    const raw = (now - last) / 1000;
+    const dt = Math.min(0.25, raw);
     last = now;
     try {
       GUIDE.frame(dt);
       if (LaunchView.flying) LaunchView.frame(dt);
-      else SIM.tick(dt);
+      else SIM.tick(Math.min(1, raw)); // the world clock keeps its speed even on slow computers
       UI.updateTop();
       MapView.frame(); OrbitView.frame(); OpsView.frame();
     } catch (e) { console.error(e); }

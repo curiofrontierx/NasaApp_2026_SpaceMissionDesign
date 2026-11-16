@@ -55,7 +55,8 @@ const OPTIONS = {
 };
 
 const LABELS = { battery: 'Battery', thruster: 'Thruster', storage: 'Data storage', transmitter: 'Transmitter', detector: 'Detector', site: 'Launch site' };
-const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'liion100', thruster: 'hydrazine', storage: 'cfc400', transmitter: 'ewc27', detector: 'swir', site: 'cape' };
+// Default design: completes the default 10-year mission (long-life VES battery, 5-year ASCENT thruster, Zoom detector for a clear climate impact)
+const DEFAULTS = { missionName: 'MethaneWatch-1', battery: 'ves', thruster: 'ascent', storage: 'cfc400', transmitter: 'ewc27', detector: 'zoom', site: 'cape' };
 
 // How good each part is (0–100), shown as bars on the Design page.
 // Battery, thruster, detector: the catalog's effectiveness %.

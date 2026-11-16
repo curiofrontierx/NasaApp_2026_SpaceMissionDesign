@@ -104,12 +104,3 @@
   .bmr-hbar { grid-template-columns: 1fr auto; } .bmr-hbar .bmr-bar { grid-column: 1 / -1; }
   .bmr-map { height: 260px; } .bmr-map.bmr-big { height: 320px; }
 }
-
-/* satellite design review */
-.bmr .bmr-dr { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; margin-top: 12px; }
-.bmr .bmr-dr h3 { margin: 0 0 4px; font-size: 17px; }
-.bmr .bmr-dr-v { font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; background: rgba(255,255,255,.08); }
-.bmr .bmr-dr-v.bmr-dr-good { color: #4ade80; } .bmr .bmr-dr-v.bmr-dr-poor { color: #f87171; } .bmr .bmr-dr-v.bmr-dr-mixed { color: #fbbf24; }
-.bmr .bmr-dr-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
-.bmr .bmr-dr-list li { display: flex; gap: 10px; line-height: 1.5; }
-.bmr .bmr-dr-fix { margin-top: 3px; color: #7dd3fc; }

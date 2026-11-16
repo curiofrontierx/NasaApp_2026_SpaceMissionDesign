@@ -1,5 +1,5 @@
 /* =========================================================================
-   Satellite design input from design.html (Design Configuration page).
+   Satellite design input from design.html (Design step).
 
    design.html saves the player's choice to localStorage["cfx.design.v1"]:
      { missionName, battery, thruster, storage, transmitter, detector, savedAt }
@@ -52,7 +52,7 @@ const DESIGN_INPUT = (() => {
       S.designInputStamp = stamp;
       const comp = DESIGN.compute(design.parts);
       SIM.decision('design', `Design received: ${design.name}`,
-        'Designed on the Design Configuration page: ' + Object.keys(design.parts).map(id => ALL_PARTS[id].name).join(', ') + '.',
+        'Designed on the Design step: ' + Object.keys(design.parts).map(id => ALL_PARTS[id].name).join(', ') + '.',
         `Ready to launch: ${comp.busUsed.name}, ${comp.mass.toFixed(2)} kg, ${fmt$(comp.cost)} to build including the automatic subsystems, design score ${comp.score.total}.`,
         { parts: design.parts, score: comp.score.total, cost: comp.cost, partsCost: comp.partsCost });
     }

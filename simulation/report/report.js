@@ -49,7 +49,7 @@
   const expectedRise = R.expectedRisePpb != null ? R.expectedRisePpb
     : (R.yearsPlayed > 0.25 ? ((C.ch4ppbBusinessAsUsual || 0) - (C.ch4ppbStart || 0)) / R.yearsPlayed * R.durationYears : 15 * R.durationYears);
   const effectiveness = (R.effectiveness != null ? R.effectiveness : Math.max(0, Math.min(1, prevented / Math.max(1, expectedRise)))) * 100;
-  const gameOver = ['bankrupt', 'trust', 'tipping'].includes(R.reason);
+  const gameOver = ['bankrupt', 'trust', 'tipping', 'lost'].includes(R.reason);
   const abandoned = R.reason === 'ended' && completion < 0.25;
   let verdict, cls;
   if (gameOver) { verdict = 'Mission failed'; cls = 'fail'; }
@@ -65,6 +65,7 @@
     bankrupt: `The agency ran out of money and went bankrupt after ${num(R.yearsPlayed, 1)} of ${R.durationYears} years.`,
     trust: `Public support fell to zero and the Mission Director was removed after ${num(R.yearsPlayed, 1)} of ${R.durationYears} years.`,
     tipping: 'Global warming reached the +2.5°C tipping point.',
+    lost: `Every satellite failed after ${num(R.yearsPlayed, 1)} of ${R.durationYears} years${(R.satellites || []).find(s => s.cause) ? ` (${(R.satellites || []).find(s => s.cause).cause})` : ''}, so the mission stopped.`,
   }[R.reason] || 'The mission ended.';
   const verdictWhy = cls === 'success'
     ? `Your satellites found the leaks that mattered and the world listened: methane ended ${num(prevented, 1)} ppb below where it would have been without you.`
@@ -208,16 +209,6 @@
 
   /* ---------- maps: start vs end, and the timelapse ---------- */
   const MF = R.mapFrames;
-  // ---- satellite design review: what went wrong and which parts would help ----
-  if (R.designReview && R.designReview.length) {
-    const icon = { bad: '❌', warn: '⚠️', good: '✅' };
-    const verdict = { good: 'Worked well', mixed: 'Mostly worked', poor: 'Held the mission back', untested: 'Never flew' };
-    root.append(el('div', 'bmr-panel', '<h2>Satellite design review</h2><p class="bmr-sub">What went wrong with each design in orbit, and which part changes on the Mission Design page would improve the next mission.</p>' +
-      R.designReview.map(d => '<div class="bmr-dr"><h3>' + esc(d.name) + ' <span class="bmr-dr-v bmr-dr-' + d.verdict + '">' + verdict[d.verdict] + '</span></h3>' +
-        '<p class="bmr-sub">' + d.parts.map(p => esc(p.name)).join(' · ') + '<br>Design score ' + d.score + '/100 · ' + d.mass + ' kg · $' + Math.round(d.cost).toLocaleString('en-US') + ' each · ' + d.flown + ' flown · ' + d.detections + ' leaks reported</p>' +
-        '<ul class="bmr-dr-list">' + d.findings.map(f => '<li class="bmr-dr-' + f.level + '"><span>' + icon[f.level] + '</span><div><b>' + esc(f.area) + ':</b> ' + f.what + (f.fix ? '<div class="bmr-dr-fix">💡 ' + f.fix + '</div>' : '') + '</div></li>').join('') + '</ul></div>').join('')));
-  }
-
   const maps = el('div', 'bmr-panel', `<h2>The methane map: before and after</h2>
     <p class="bmr-sub">The same map as the Methane Emissions tab: country colours and site circles come from the game, on NASA Blue Marble imagery (GIBS).</p>
     <div class="bmr-controls">

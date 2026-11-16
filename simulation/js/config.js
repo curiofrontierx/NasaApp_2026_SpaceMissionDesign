@@ -9,7 +9,7 @@
 const PAGES = {
   start: 'index.html',
   design: 'design.html',
-  nasaData: 'nasa-data.html',
+  nasaData: 'hotspots.html',
   feedback: 'feedback.html',   // "End round" goes here
   results: 'feedback.html',    // final results go here when the game ends
 };
@@ -28,7 +28,7 @@ const STORE = {
 const DEFAULT_CONFIG = {
   agencyName: 'Blue Marble Space Agency',
   playerName: 'Director',
-  durationYears: 25,          // 10, 25, 50 or 100
+  durationYears: 10,          // default 10 years (10, 25, 50 or 100 in Mission settings); runs at 1 second per year
   difficulty: 'director',     // 'cadet' | 'director' | 'crisis'
   startFunds: 1500000,        // USD
   annualBudget: 900000,       // USD per year before trust modifier
@@ -42,6 +42,10 @@ const DIFFICULTY = {
   director: { warmingRate: 0.022, leakRate: 1.0, fundMult: 1.0, eventRate: 1.0 },
   crisis:   { warmingRate: 0.030, leakRate: 1.5, fundMult: 0.7, eventRate: 1.6 },
 };
+
+// Game speed (game seconds per real second) when the clock runs normally: 1 year per second,
+// so a mission takes as many seconds as the years chosen in Mission settings. Decisions still pause the clock; « slows it down.
+const DEFAULT_WARP = 31557600;
 
 function safeGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
 function safeSet(key, val) { try { localStorage.setItem(key, val); return true; } catch { return false; } }

@@ -23,7 +23,8 @@
 
   const read = () => { try { return { ...DEFAULT_CONFIG, ...(JSON.parse(localStorage.getItem(KEY) || '{}') || {}) }; } catch { return { ...DEFAULT_CONFIG }; } };
   const write = cfg => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch { /* storage blocked */ } };
-  const money = n => n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 2 : 0).replace(/\.?0+$/, '') + 'M' : '$' + Math.round(n / 1000) + 'k';
+  // parseFloat drops only decimal zeros (2.50 → 2.5); the old regex also ate the 0 of 10 and showed $10M as $1M
+  const money = n => n >= 1e6 ? '$' + parseFloat((n / 1e6).toFixed(2)) + 'M' : '$' + Math.round(n / 1000) + 'k';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // a game in progress in this browser?

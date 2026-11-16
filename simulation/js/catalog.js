@@ -3,7 +3,7 @@
    Parts (from the team sheets) + realistic engineering numbers the
    simulation needs. Fields marked est* are engineering estimates.
    img = NASA Image and Video Library nasa_id (not loaded by this page since the
-         Mission Design moved to design.html; kept as photo credits)
+         Satellite Builder moved to design.html; kept as photo credits)
    ========================================================================= */
 
 const U_VOLUME = 1; // 1U = 10 × 10 × 10 cm

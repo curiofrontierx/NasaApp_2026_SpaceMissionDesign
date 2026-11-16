@@ -52,7 +52,7 @@ const NASA_GIBS = (() => {
   function leafletLayer(key, date) {
     const L0 = LAYERS[key];
     return L.tileLayer(tileUrl(key, date), {
-      maxNativeZoom: L0.max, maxZoom: 10, opacity: L0.opacity ?? 1, crossOrigin: true, noWrap: true, // one world only
+      maxNativeZoom: L0.max, maxZoom: 10, opacity: L0.opacity ?? 1, crossOrigin: true,
       bounds: [[-85.0511, -180], [85.0511, 180]],
       attribution: '<a href="https://earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a>',
     });

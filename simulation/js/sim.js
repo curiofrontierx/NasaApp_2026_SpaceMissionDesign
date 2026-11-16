@@ -70,7 +70,7 @@ const SIM = (() => {
       log: [], decisions: [], ledger: [], history: [], reports: [], month: newMonth(), money: { spent: 0, earned: 0, by: {} }, mapFrames: { every: 1, n: 0, frames: [] },
       stats: { leaksDetected: 0, leaksFixed: 0, mtAvoided: 0, launches: 0, launchFailures: 0, satsLost: 0, passes: 0, dataMB: 0, grants: 0, missedLeaks: 0, scienceObs: 0 },
       nextMonth: t0 + 30.44 * DAY * 1000, nextRound: t0 + cfg.roundLengthMonths * 30.44 * DAY * 1000, roundStart: t0,
-      warp: 600, paused: true, ended: false, pending: null, flightActive: false,
+      warp: DEFAULT_WARP, paused: true, ended: false, pending: null, flightActive: false,
     };
     // seed some active leaks so there is something to find on day one
     SITES.forEach((site, i) => { for (let k = 0; k < Math.round(site.leakRate * 0.35); k++) spawnLeak(i, true); });
@@ -774,16 +774,19 @@ const SIM = (() => {
     sat.status = 'reentered';
     sat.endT = S.t;
     if (sat.decommissioning) { logEvent('info', `${sat.name} re-entered and burned up as planned. Responsible end of life.`); adjustTrust(0.5); }
-    else { S.stats.satsLost++; logEvent('bad', `${sat.name} re-entered the atmosphere and burned up.`); adjustTrust(-2, 'Satellite lost to drag'); }
+    else { S.stats.satsLost++; sat.deathCause = 'orbit decayed and it re-entered the atmosphere'; logEvent('bad', `${sat.name} re-entered the atmosphere and burned up.`); adjustTrust(-2, 'Satellite lost to drag'); }
     emit('satellites');
+    if (!S.ended && !S.satellites.some(s => s.status === 'active') && !S.launches.some(l => l.status === 'scheduled' || l.status === 'ready')) end('lost');
   }
   function die(sat, why) {
     if (sat.status !== 'active') return;
-    sat.status = 'dead'; sat.endT = S.t; sat.endWhy = why; S.stats.satsLost++;
+    sat.status = 'dead'; sat.endT = S.t; S.stats.satsLost++; sat.deathCause = why;
     logEvent('bad', `${sat.name} has failed: ${why}. It is now space debris.`);
     adjustTrust(-1.5);
     S.debris.push({ name: sat.name + ' (dead)', el: sat.el });
     emit('satellites');
+    // mission failed: no satellite left working and none on the way, so stop now and show the report
+    if (!S.ended && !S.satellites.some(s => s.status === 'active') && !S.launches.some(l => l.status === 'scheduled' || l.status === 'ready')) end('lost');
   }
 
   /* ===================== leaks over time ===================== */
@@ -846,8 +849,9 @@ const SIM = (() => {
     save();
     emit('month');
     // loss conditions
-    if (S.funds < -250000) return end('bankrupt');
-    if (S.trust <= 0) return end('trust');
+    // budget and public support are fixed by the mission settings and are not shown while flying,
+    // so they no longer end the mission (no bankruptcy, no dismissal): only technical outcomes matter
+    if (S.trust < 1) S.trust = 1;
     if (S.climate.dT >= 2.5) return end('tipping');
   }
 
@@ -918,7 +922,12 @@ const SIM = (() => {
           { id: 'dodge', label: 'Dodge (burn propellant)', explain: 'Uses a small amount of Δv now; the safe choice operators make when probability exceeds 1 in 10,000.' },
           { id: 'risk', label: 'Accept the risk', explain: 'Saves propellant, but a collision would destroy the satellite and create a debris cloud.' },
         ] };
-      emit('pending', S.pending);
+      // handled automatically, no pop-up: the satellite dodges if its thruster still has propellant
+      // (a design question); the outcome goes into the event log and the decision log
+      const canDodge = sat.prop > 0.0005 && sat.comp.engines.length > 0;
+      resolvePending('dodge');
+      if (canDodge) logEvent('info', `☄️ ${sat.name} dodged a piece of debris with an avoidance burn.`);
+      else if (sat.status === 'active') logEvent('bad', `☄️ Debris passed close to ${sat.name}: no propellant left to dodge, it was lucky this time.`);
     }
     if (Math.random() < 0.035 * (S.trust / 50)) {
       const g = Math.round(rand(80, 250) * 1000 * (S.trust / 60));
@@ -932,19 +941,12 @@ const SIM = (() => {
       logEvent('bad', `🚨 Breaking: reports of a major gas release near ${site.name}. Satellites with the right instrument and orbit can confirm it.`, { site: site.id });
       emit('bigleak', { site, leak });
     }
-    if (Math.random() < 0.02 * r && !S.pending) {
-      S.pending = { type: 'budget', title: 'Budget cut vote',
-        text: 'Lawmakers propose cutting your appropriation by 15% for the next 12 months. You can spend 150 Science Points on a public data presentation to fight the cut.',
-        options: [
-          { id: 'present', label: 'Present the data (−150 Science)', explain: 'Science Points turn into political support when the data is clear and public.' },
-          { id: 'accept', label: 'Accept the cut', explain: 'Keep your Science Points for later, lose 15% income for a year.' },
-        ] };
-      emit('pending', S.pending);
-    }
+    // (the 'Budget cut vote' pop-up was removed: only technical decisions, such as debris alerts, pause the mission)
     if (Math.random() < 0.02 * r) { S.launchDiscountUntil = S.t + 180 * DAY * 1000; logEvent('good', '🤝 International partnership: launches booked in the next 6 months cost 50% less.'); }
     active.forEach(s => {
       if (Math.random() < 0.025 * r && !s.calibDrift) { s.calibDrift = true; logEvent('bad', `${s.name}: instrument calibration drift (−15% sensitivity). Recalibrate from the Orbit Viewer.`); }
-      const bf = s.comp.batteries.some(b => b.id === 'nicd') ? 0.05 : 0.008;
+      // early cell degradation: old NiCd often, screened space-grade VES cells rarely, everything else in between
+      const bf = s.comp.batteries.some(b => b.id === 'nicd') ? 0.05 : s.comp.batteries.some(b => b.id === 'ves') ? 0.002 : 0.008;
       if (Math.random() < bf * r) { s.batteryHealth *= 0.75; logEvent('bad', `${s.name}: battery cell degraded early (capacity −25%).`); }
     });
   }
@@ -973,9 +975,13 @@ const SIM = (() => {
   /* ===================== main tick ===================== */
   function tick(realDt) {
     if (!S || S.paused || S.ended || S.pending) return;
-    let simDt = realDt * S.warp;
-    simDt = Math.min(simDt, 86400 * 30); // never more than a month per frame
-    advance(simDt);
+    // at 1 year/s a frame can cover several weeks: advance in month-sized pieces so nothing is skipped
+    let simDt = Math.min(realDt * S.warp, YEAR);
+    while (simDt > 1e-6 && !S.paused && !S.ended && !S.pending) {
+      const d = Math.min(simDt, 86400 * 30);
+      advance(d);
+      simDt -= d;
+    }
   }
 
   /* Fine mode (≤ 2 h of game time per frame): every satellite is stepped along its real ground
@@ -989,7 +995,7 @@ const SIM = (() => {
     const step = coarse ? Math.min(6 * 3600, Math.max(1800, simDt / 40)) : Math.min(300, Math.max(10, simDt / 20));
     let left = simDt;
     let guard = 0;
-    while (left > 1e-6 && guard++ < 600) {
+    while (left > 1e-6 && guard++ < 600 && !S.ended) {
       const dt = Math.min(step, left);
       const sun = ORB.sunDir(S.t + dt * 500);
       const solar = ORB.solarFactor(S.t);
@@ -1058,45 +1064,6 @@ const SIM = (() => {
     emit('launches');
   }
 
-  /* ===================== complete mission: run to the planned end on its own ===================== */
-  // A booked launch flown without the flight screen: the autopilot's nominal orbit, with the rocket's real reliability.
-  function autoLaunch(L) {
-    const opt = LAUNCH_OPTIONS.find(o => o.id === L.opt) || {};
-    const rocket = ROCKETS[opt.rocket] || { reliability: 0.95 };
-    const rel = rocket.reliability * (S.cfg.agency === 'startup' ? 0.97 : 1);
-    if (Math.random() > rel) { launchResult(L, { ok: false, reason: 'rocket anomaly during ascent' }); logEvent('bad', `🚀 The launch of ${L.designName} failed: rocket anomaly during ascent.`); return; }
-    const site = LAUNCH_SITES.find(s => s.id === L.site) || { lon: 0 };
-    const alt = (L.target && L.target.alt) || 525, inc = (L.target && L.target.inc) || 97.6;
-    // the orbit plane passes over the launch site at launch time
-    const base = { a: ORB.RE + alt * 1000, e: 0.001, i: inc * ORB.DEG, raan: ORB.wrap(ORB.gmst(S.t) + site.lon * ORB.DEG), argp: 0, M: 0, epoch: S.t };
-    for (let k = 0; k < L.qty; k++) {
-      const name = L.qty > 1 ? `${L.designName}-${String.fromCharCode(65 + k)}` : L.designName;
-      addSatellite(name, L.parts, { ...base, M: L.qty > 1 ? k / L.qty * ORB.TAU : 0 }, { opt: L.opt, date: fmtDate(S.t) });
-    }
-    launchResult(L, { ok: true, apo: alt, peri: alt, inc });
-    logEvent('good', `🚀 Autopilot launch: ${L.qty}× ${L.designName} reached a ${alt} km orbit at ${inc.toFixed(1)}°; the empty stage was deorbited.`);
-  }
-  // the safe default for a decision nobody is there to make
-  function autoChoice(p) {
-    if (p.type === 'budget') return S.science >= 150 ? 'present' : 'accept';
-    if (p.type === 'debris') return 'dodge';
-    return p.options && p.options[0] && p.options[0].id;
-  }
-  // Advance for up to budgetMs of real time; returns true when the mission has ended.
-  function completeStep(budgetMs = 25) {
-    if (!S || S.ended) return true;
-    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    const t0 = now();
-    let guard = 0;
-    while (!S.ended && now() - t0 < budgetMs && guard++ < 400) {
-      if (S.pending) resolvePending(autoChoice(S.pending));
-      for (const L of S.launches) if (L.status === 'ready') autoLaunch(L);
-      advance(Math.max(60, Math.min(30.44 * DAY, (S.tEnd - S.t) / 1000 + 60)));
-    }
-    return S.ended;
-  }
-  function progress() { return Math.min(1, Math.max(0, (S.t - S.t0) / (S.tEnd - S.t0))); }
-
   /* ===================== rounds & end ===================== */
   function roundSummary() {
     const h0 = S.history.find(h => h.t >= S.roundStart) || S.history[0];
@@ -1162,8 +1129,7 @@ const SIM = (() => {
         };
       })(),
       trust: +S.trust.toFixed(1), science: S.science,
-      designReview: typeof DESIGN_REVIEW !== 'undefined' ? DESIGN_REVIEW.build(S) : [],
-      satellites: sats.map(s => ({ name: s.name, status: s.status, launched: fmtDate(s.launched), designScore: s.comp.score.total, detections: s.stats.detections, dataMB: Math.round(s.stats.downMB), altKm: Math.round((s.el.a - ORB.RE) / 1000), incDeg: +(s.el.i / ORB.DEG).toFixed(1) })),
+      satellites: sats.map(s => ({ name: s.name, status: s.status, launched: fmtDate(s.launched), ended: s.endT ? fmtDate(s.endT) : null, cause: s.deathCause || null, designScore: s.comp.score.total, detections: s.stats.detections, dataMB: Math.round(s.stats.downMB), altKm: Math.round((s.el.a - ORB.RE) / 1000), incDeg: +(s.el.i / ORB.DEG).toFixed(1) })),
       history: S.history.filter((_, i) => i % Math.max(1, Math.floor(S.history.length / 240)) === 0),
       decisions: S.decisions,
       reports: S.reports.slice(-36),
@@ -1241,7 +1207,7 @@ const SIM = (() => {
   return {
     siteEmission, profile,
     get state() { return S; }, on, emit, newGame, load, save, tick, advance, addSatellite, command, applyDv, bookLaunch, launchResult,
-    launchPrice, nextLaunchDate, resolvePending, completeStep, progress, endRound, roundSummary, end, results, siteStatus, countryEmission, nextContact,
+    launchPrice, nextLaunchDate, resolvePending, endRound, roundSummary, end, results, siteStatus, countryEmission, nextContact,
     capacityWh, usableFloor, dvLeft, storageCap, decision, logEvent, ledger, fmtDate, money, years, YEAR, DAY, MT_PER_TPH,
   };
 })();
